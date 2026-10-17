@@ -1,0 +1,171 @@
+/* UI Theme CSS for GPREC Student Assistant */
+
+:root {
+  --primary-navy: #0f172a;
+  --accent-gold: #f59e0b;
+  --bg-neutral: #f8fafc;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --white: #ffffff;
+  --border-light: #e2e8f0;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --radius-lg: 12px;
+}
+
+/* Base resets & typography */
+html, body, [class*="css"] {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+}
+
+/* Header container styling */
+.main-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 1rem 0;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--border-light);
+}
+
+.main-header img {
+    height: 50px;
+    object-fit: contain;
+}
+
+.main-header h1 {
+    color: var(--primary-navy);
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+    padding: 0;
+}
+
+.main-header p {
+    color: var(--text-muted);
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.badge {
+    display: inline-block;
+    background-color: #e2e8f0;
+    color: #334155;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+/* Chat container styles */
+.stChatMessage {
+    background-color: transparent !important;
+}
+
+[data-testid="stChatMessageContent"] {
+    padding: 1.25rem !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-sm);
+    line-height: 1.6;
+}
+
+/* User Message */
+[data-testid="chatAvatarIcon-user"] {
+    background-color: var(--primary-navy) !important;
+}
+.stChatMessage:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] {
+    background-color: var(--bg-neutral) !important;
+    border: 1px solid var(--border-light);
+    color: var(--text-main);
+}
+
+/* Assistant Message */
+[data-testid="chatAvatarIcon-assistant"] {
+    background-color: var(--accent-gold) !important;
+}
+.stChatMessage:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] {
+    background-color: var(--white) !important;
+    border: 1px solid var(--border-light);
+    color: var(--text-main);
+}
+
+/* Chat Input Styling */
+[data-testid="stChatInput"] {
+    border-radius: var(--radius-lg) !important;
+    border: 1px solid var(--border-light) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+[data-testid="stChatInput"]:focus-within {
+    border-color: var(--accent-gold) !important;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2) !important;
+}
+
+/* Quick Actions Sidebar */
+[data-testid="stSidebar"] {
+    background-color: var(--white);
+    border-right: 1px solid var(--border-light);
+}
+
+.stButton > button {
+    width: 100%;
+    border-radius: 8px !important;
+    border: 1px solid var(--border-light) !important;
+    background-color: var(--white) !important;
+    color: var(--primary-navy) !important;
+    font-weight: 500 !important;
+    padding: 0.75rem 1rem !important;
+    transition: all 0.2s ease !important;
+}
+
+.stButton > button:hover {
+    border-color: var(--accent-gold) !important;
+    color: var(--accent-gold) !important;
+    background-color: var(--bg-neutral) !important;
+}
+
+/* Sources Expander Styling */
+.streamlit-expanderHeader {
+    font-weight: 600;
+    color: var(--text-muted);
+}
+.streamlit-expanderContent {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    background: var(--bg-neutral);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+/* Markdown tweaks for assistant */
+.stMarkdown h3 {
+    color: var(--primary-navy);
+    font-size: 1.25rem;
+    margin-top: 1rem;
+}
+
+.stMarkdown ul, .stMarkdown ol {
+    padding-left: 1.5rem;
+}
+
+.stMarkdown li {
+    margin-bottom: 0.5rem;
+}
+
+/* Hide heading anchor links */
+.stMarkdown a.header-anchor {
+    display: none !important;
+}
+.stMarkdown h1 a.anchor-link, 
+.stMarkdown h2 a.anchor-link, 
+.stMarkdown h3 a.anchor-link,
+.stMarkdown h4 a.anchor-link,
+.stMarkdown h5 a.anchor-link,
+.stMarkdown h6 a.anchor-link {
+    display: none !important;
+}
+
+/* Darken small text for contrast */
+small {
+    color: #475569 !important;
+}

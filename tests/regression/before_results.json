@@ -1,0 +1,561 @@
+[
+  {
+    "id": 1,
+    "query": "give me the information regarding the placements",
+    "category": "placements",
+    "expected_behavior": "Return factual placement statistics/records from official sources, no hallucinated packages or numbers, single clean response.",
+    "answer": "\n\nHere is the information regarding placements at GPREC based on the official sources:\n\n**Training & Placement Cell**\n*   **Head:** The cell is headed by **Dr. K. Govardhan Reddy**, Professor of CSE (AIML).\n*   **Team:** It includes a full-time Manager Corporate Relations, an Assistant Training and Placement Officer, and a committee (1 Professor In-charge, 3 faculty members, and 5 student members from each department).\n*   **Key Services:**\n    *   Arranges **campus interviews for final year students**.\n    *   Helps students secure **internship opportunities**.\n    *   Conducts **mock aptitude tests, psychometric tests, group discussions, and mock interviews** with alumni and professionals.\n    *   Maintains an **Alumni network** and organizes industry interactions.\n\n**Placement Training**\n*   Training begins right from the **first year** of admission.\n*   Approximately **300 hours of training** are distributed across semesters.\n*   **Topics covered:** Quantitative Ability, Logical Reasoning, Verbal Ability, Programming Skills, Communication Skills, Group Discussion & Interview Skills, and Personality Development.\n*   **Schedule:** Classes are part of the regular timetable in some semesters, and held during holidays, vacations, or beyond college hours in others.\n*   **Resource Persons:** Training is conducted by professional institutes (e.g., PrepInsta, LearnSquare, TAP Academy) and industry representatives (e.g., TCS, Infosys, Wipro, Microsoft, Oracle, IBM), along with distinguished alumni and internal faculty.\n\n**T & P Club**\n*   A student club works under the Training and Placement Department to assist in organizing events and create awareness.\n*   **Eligibility:** Selected students from different years and branches with high attendance and marks can join via a selection process (written test, group discussion, and personal interviews).\n\nFor the most recent placement drives and specific lists, please check the official notice board or the Training & Placement Department directly.",
+    "sources": [
+      {
+        "title": "Training & Placements – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/training-placements/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Training & Placements – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/training-placements/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Training & Placements – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/training-placements/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Placement Training – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/training-placements/placement-training/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Placement Training – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/training-placements/placement-training/",
+        "page": null,
+        "published_date": null
+      }
+    ],
+    "confidence": "High",
+    "latency_sec": 10.43,
+    "check_passed": true,
+    "check_reason": "Passed basic reliability check."
+  },
+  {
+    "id": 2,
+    "query": "details about eee department faculties list and their designations",
+    "category": "departments_faculty",
+    "expected_behavior": "List EEE faculty members and their official designations strictly matching retrieved text.",
+    "answer": "I couldn't find this information in the available official GPREC sources. Please check the latest official notice or contact the relevant college office.",
+    "sources": [
+      {
+        "title": "Electrical and Electronics Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electrical-and-electronics-engineering/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Electrical and Electronics Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electrical-and-electronics-engineering/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Electrical and Electronics Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electrical-and-electronics-engineering/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Humanities and Basic Sciences – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/humanities-and-basic-sciences/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Humanities and Basic Sciences – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/humanities-and-basic-sciences/",
+        "page": null,
+        "published_date": null
+      }
+    ],
+    "confidence": "High",
+    "latency_sec": 49.12,
+    "check_passed": true,
+    "check_reason": "Passed basic reliability check."
+  },
+  {
+    "id": 3,
+    "query": "list the PhD faculties",
+    "category": "ambiguity_faculty",
+    "expected_behavior": "Ambiguity handling: query lacks department. Must ask CLARIFY (Which department?) or explicitly state the department scope. Strictly count only people with explicit doctorate (Dr. prefix or Ph.D degree).",
+    "answer": "As per the official GPREC Humanities and Basic Sciences department page (Source 13, dated 2026-10-08), **19 teaching faculty hold Ph.D. degrees** out of 43 total teaching staff. The PhD faculty listed include:\n\n- Dr. K.V.S. Gopala Krishna Sastry  \n- Dr. Y. Rajasekhara Goud  \n- Dr. N.V.S. Gupta  \n- Dr. K. Subhashini  \n- Dr. A. Vijaya Kumar  \n- Dr. Nasreen Noor  \n- Dr. V. Raghavendra Prasad  \n- Dr. M. Siva Sankara Reddy  \n- Dr. K. Aparna  \n- Dr. V. Rangaveni  \n- Dr. E. Kiran Babu  \n- Dr. S. Sailaja  \n- Dr. A. LingaSwamy  \n- G. Venkatarami Reddy  \n\n*(Note: The department has 20 faculty currently pursuing doctoral research. For the complete official list, refer to the GPREC HBS faculty page.)*",
+    "sources": [
+      {
+        "title": "Electronics and Communication Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electronics-and-communication-engineering/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Electronics and Communication Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electronics-and-communication-engineering/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Electronics and Communication Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electronics-and-communication-engineering/",
+        "page": null,
+        "published_date": "2025-03-09T00:00:00"
+      },
+      {
+        "title": "Alumni Directory – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/alumni/alumni-directory/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Alumni Directory – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/alumni/alumni-directory/",
+        "page": null,
+        "published_date": null
+      }
+    ],
+    "confidence": "High",
+    "latency_sec": 66.37,
+    "check_passed": false,
+    "check_reason": "Failed ambiguity check: Query lacks department and did not ask to clarify or state scope."
+  },
+  {
+    "id": 4,
+    "query": "list the phd faculties of eee department",
+    "category": "forbid_inference_faculty",
+    "expected_behavior": "Forbid inference: Only list persons explicitly confirmed with doctorate ('Dr.' or Ph.D). Being a jury member or resource person is NOT evidence. If incomplete, state 'the sources only confirm X of Y'.",
+    "answer": "\n\nAccording to the official EEE department profile, the department has a strong faculty pool with **17 Ph.D.’s**. The provided sources do not contain a complete name list for all of them.\n\nHowever, the following faculty members are explicitly noted in recent achievements as supervising Ph.D. scholars:\n\n*   **Dr. G. Kishor (HoD)** – Supervised Sri. R Rohith (Jan 2026)\n*   **G Satheesh (Associate Professor)** – Supervised Sri. M. Venkateswarlu (Jan 2026) and Sri. M. Sunil Kumar (Jun 2025)\n\nFor the complete list of all Ph.D. faculty, please check the official Faculty page or contact the relevant college office.",
+    "sources": [
+      {
+        "title": "Electronics and Communication Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electronics-and-communication-engineering/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Electronics and Communication Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electronics-and-communication-engineering/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Electronics and Communication Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electronics-and-communication-engineering/",
+        "page": null,
+        "published_date": "2025-03-09T00:00:00"
+      },
+      {
+        "title": "Electrical and Electronics Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electrical-and-electronics-engineering/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Electrical and Electronics Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electrical-and-electronics-engineering/",
+        "page": null,
+        "published_date": null
+      }
+    ],
+    "confidence": "High",
+    "latency_sec": 29.18,
+    "check_passed": true,
+    "check_reason": "Passed inference restriction check."
+  },
+  {
+    "id": 5,
+    "query": "information about the boys hostel",
+    "category": "hostel",
+    "expected_behavior": "Non-empty hostel details, facilities, rules from official sources. Never expose private phone numbers or default credentials.",
+    "answer": "The Boys Hostel is located adjacent to the GPREC campus.  \n- **Room type & fee:** Ordinary room (common bathroom) – ₹75,500 per year.  \n- **Additional one‑time charges (for first‑time hostel admission):**  \n  - Non‑refundable maintenance fund: ₹5,000  \n  - Refundable caution deposit: ₹5,000  \n- **Seat allocation:** First‑come, first‑served basis.  \n- **Contact for details:** Dr. Ishthaq Ahmed, Associate Professor of CSE – 9866776244.  \n\n(If you need any other specific information, please let me know.)",
+    "sources": [
+      {
+        "title": "Hostels – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://gprec.ac.in/hostel",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Hostels – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://gprec.ac.in/hostel",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Hostels – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://gprec.ac.in/hostel",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Hostels – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://gprec.ac.in/hostel/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Hostels – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/hostels/",
+        "page": null,
+        "published_date": null
+      }
+    ],
+    "confidence": "High",
+    "latency_sec": 6.47,
+    "check_passed": true,
+    "check_reason": "Passed basic reliability check."
+  },
+  {
+    "id": 6,
+    "query": "about the clubs in college",
+    "category": "clubs",
+    "expected_behavior": "Non-empty information on student clubs/activities from official college sources without hallucination.",
+    "answer": "Based on the official GPREC sources, here are the student clubs at GPREC:\n\n**Student Clubs at GPREC:**\n\n- **IEI Students' Chapter** – Conducts seminars on technical topics, quizzes, and lectures for each department.\n- **Bhuvana Vijayam** – Literary and cultural association that provides a platform for students to exhibit their talents in culture and literature.\n- **Center for Awareness & Discussion** – Organizes group discussions and quizzes to familiarize students with current topics.\n- **Vivekananda Study Circle** – Focuses on universal brotherhood, selfless service to society, and inculcating noble values in youth.\n- **Art of Living Forum** – Aims to bring joy, a stress-free mind, a healthy body, and blossomed life to students and faculty.\n- **T&P Club (Training & Placement Club)** – Works under the Guidance Training and Placement Department. Members are selected from different years and branches. Its aims include assisting the training and placement cell, creating awareness about placement and training processes, developing teamwork and leadership skills, and connecting students with alumni.\n\nThese are the clubs currently listed on the official GPREC website. For the most up-to-date information, please check the latest official notice or contact the college office.",
+    "sources": [
+      {
+        "title": "Student Clubs – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/student-clubs",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Student Clubs – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/student-clubs",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Student Clubs – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/student-clubs",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Student Clubs – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/student-clubs/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Student Clubs – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/student-clubs",
+        "page": null,
+        "published_date": null
+      }
+    ],
+    "confidence": "High",
+    "latency_sec": 23.2,
+    "check_passed": true,
+    "check_reason": "Passed basic reliability check."
+  },
+  {
+    "id": 7,
+    "query": "give me detail information about each and every faculty in eee department",
+    "category": "departments_faculty",
+    "expected_behavior": "Grounded faculty details without fabricating designations or private personal phone numbers/emails.",
+    "answer": "\n\nThe official GPREC sources provide an overview and some named faculty members, but not detailed profiles for every single faculty member.\n\nHere is what is available:\n- **Department Head:** Dr. G.Kishor\n- **Teaching Staff:** 4 Professors, 8 Associate Professors, 17 Assistant Professors\n- **Qualifications:** 17 Ph.D.’s and 12 M.Tech.’s\n- **Named EEE Faculty** (from IEEE and E-Governance committees): Dr. K. Jagadeesh, Dr. S. Anil Kumar, Dr. V. Anantha Lakshmi, and D. Vannurappa\n\nDetailed profiles for each and every faculty member are not listed in the current sources.\n\nI couldn't find this information in the available official GPREC sources. Please check the latest official notice or contact the relevant college office.",
+    "sources": [
+      {
+        "title": "Electrical and Electronics Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electrical-and-electronics-engineering/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Electrical and Electronics Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electrical-and-electronics-engineering/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Electrical and Electronics Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electrical-and-electronics-engineering/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Extra Academic Activities (EAA) Cell – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/i-eee",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Extra Academic Activities (EAA) Cell – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/i-eee",
+        "page": null,
+        "published_date": null
+      }
+    ],
+    "confidence": "High",
+    "latency_sec": 17.55,
+    "check_passed": true,
+    "check_reason": "Passed basic reliability check."
+  },
+  {
+    "id": 8,
+    "query": "who is the principal of this college",
+    "category": "leadership",
+    "expected_behavior": "Answer college leadership (Principal: Dr. B. Sreenivasa Reddy) from directory/official source, or explain missing coverage.",
+    "answer": "I couldn't find this information in the available official GPREC sources. Please check the latest official notice or contact the relevant college office.",
+    "sources": [
+      {
+        "title": "Alumni Activities – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/alumni/alumni-activities/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Alumni Activities – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/alumni/alumni-activities/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Alumni Activities – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/alumni/alumni-activities/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Message to Parents – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/student-affairs/message-to-parents/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Message to Parents – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/student-affairs/message-to-parents/",
+        "page": null,
+        "published_date": null
+      }
+    ],
+    "confidence": "High",
+    "latency_sec": 3.58,
+    "check_passed": false,
+    "check_reason": "Failed to identify Principal Dr. B. Sreenivasa Reddy."
+  },
+  {
+    "id": 9,
+    "query": "information about ITCA",
+    "category": "acronyms_dates",
+    "expected_behavior": "No crawl/first_seen date presented as notice date; do NOT expand ITCA unless expansion explicitly appears in source.",
+    "answer": "ITCA stands for **Intensive Training Program for Career Advancement**. It’s a college program aimed at helping students advance their careers. You can access the ITCA portal at **http://examcell.gprec.ac.in/ITPPLogin.aspx** using your RollNo and password. If you have any login issues or need corrections, please contact the **Training & Placement Cell**.",
+    "sources": [
+      {
+        "title": "G. Pulla Reddy Engineering College (Autonomous)",
+        "source_url": "https://examcell.gprec.ac.in/studentserviceslogin.aspx",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "G. Pulla Reddy Engineering College (Autonomous)",
+        "source_url": "https://examcell.gprec.ac.in/studentserviceslogin.aspx",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "G. Pulla Reddy Engineering College (Autonomous)",
+        "source_url": "https://examcell.gprec.ac.in/studentserviceslogin.aspx",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "CSE- Data Science (CSD) – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/cse-data-science/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "CSE- Data Science (CSD) – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/cse-data-science/",
+        "page": null,
+        "published_date": null
+      }
+    ],
+    "confidence": "High",
+    "latency_sec": 6.54,
+    "check_passed": true,
+    "check_reason": "Passed date check."
+  },
+  {
+    "id": 10,
+    "query": "what is fee structure of EEE department",
+    "category": "fees_ambiguity",
+    "expected_behavior": "Single clean response (no duplicate plain text + not found card). Give real fee amounts with academic year / as-of date or clearly state document status.",
+    "answer": "I couldn't find this information in the available official GPREC sources. Please check the latest official notice or contact the relevant college office.",
+    "sources": [
+      {
+        "title": "Fee Structure – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/admissions/fee-structure/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Fee Structure – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/admissions/fee-structure/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Fee Structure – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/admissions/fee-structure/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Notice Board – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/notice-board/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Notice Board – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/notice-board/",
+        "page": null,
+        "published_date": null
+      }
+    ],
+    "confidence": "High",
+    "latency_sec": 12.15,
+    "check_passed": true,
+    "check_reason": "Single response check passed."
+  },
+  {
+    "id": 11,
+    "query": "information about library",
+    "category": "library",
+    "expected_behavior": "Library resources and timings. Filter out unrelated sources like Alumni or RTI.",
+    "answer": "**GPREC Central Library – Quick Overview**\n\n**📍 Location & Management**\n- Headed by a senior faculty (Library In-charge) supported by 1 Librarian, 4 Library Assistants, 1 Hardware Technician, 3 helpers.\n- Library Committee (Convener: Y.V. Mohan Reddy, Dean Academics) oversees book procurement, improvements, fines & discipline.\n\n**📚 Collection (as of latest data)**\n- **Volumes:** ~66,106 | **Titles:** ~14,153\n- **Journals:** 84 National + 979 International\n- **Classification:** Dewey Decimal Scheme | **Automation:** SLIM 21 software\n- **Open Access System** – 150 seating capacity\n\n**💻 Digital Library (Electronic Resources Wing)**\n- 50 systems with 1 Gbps internet\n- **E-journals/DBs:** IEEE (250), Elsevier ScienceDirect (369), SpringerNature (503), DELNET, NDLI, KNIBUS (off-campus), British Council Library\n- **NPTEL:** 12 Core i3 computers for video lectures (CSE, CE, ME, EEE, ECE, Basic Sciences, Humanities)\n- **Old Question Papers** (Kurnool) available\n- 2 Servers + 19 Core i3 PCs for LAN/WAN\n- Reprography: Canon IR 4525 copier & laser printers\n\n**⏰ Working Hours**\n- **All working days:** 9:00 AM – 7:00 PM\n\n**🎫 Library Cards**\n| Category | Cards Issued |\n|----------|--------------|\n| All students (except final year) | 3 |\n| Final-year students | 4 |\n| Faculty | 6 |\n| Research scholars | 4 |\n\n- Cards issued only on producing ID card | Non-transferable | 1 book per card\n- **Duplicate card:** ₹50 (report loss in writing immediately)\n- Borrower tickets/duplicates issued **only on Saturdays**\n\n**📖 Borrowing & Returns**\n- **Students:** 14 days | **Faculty:** 1 month\n- **2 renewals** allowed (if no reservations) – must present book & ID physically\n- **Overdue charges:**\n  - First 7 days: ₹1/day\n  - 8th day onward: ₹2/day (holidays counted)\n  - If due date falls on holiday → next working day\n  - Not returned within 50 days → book cost + overdue charges levied\n- **Lost book:** Report immediately → replace with same/good copy (Principal’s permission) or pay **twice the cost + overdue charges**\n- **Reservation:** Reserved books held at counter for 2 days; else passed to next in queue\n\n**📋 General Rules**\n1. ID card mandatory for entry\n2. Sign register at entrance\n3. No personal books/files (except small notebook/loose sheets)\n4. Strict silence\n5. No marking/writing in books\n6. Misbehavior → membership cancellation + disciplinary action\n7. College authorities’ decision final\n8. **Final-year project viva-voce:** Must return all books & obtain “No Dues”\n\n**🏫 Department Library (Civil Engineering Example)**\n- Established 2003 to supplement Central Library\n- Holds: 402 Text/Reference books, 633 IS/IRC codes, 221 Project reports, 16 Mini-project reports, 6 CBTs\n\n**💡 Tip:** Always carry your ID + Library card. Return/renew on time to avoid fines. For off-campus e-resource access, use **KNIBUS**.\n\n*For the latest notices (e.g., holiday timings, new subscriptions), check the library notice board or the college website.*",
+    "sources": [
+      {
+        "title": "Central Library – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/libraries/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Central Library – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/libraries/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Central Library – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/libraries/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Central Library – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/libraries/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Central Library – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/libraries/",
+        "page": null,
+        "published_date": null
+      }
+    ],
+    "confidence": "High",
+    "latency_sec": 15.59,
+    "check_passed": false,
+    "check_reason": "Irrelevant source retrieved for library: rti (https://www.gprec.ac.in/rti/statutory-declaration-under-act-4-1-1-2.pdf)"
+  },
+  {
+    "id": 12,
+    "query": "who is the head of eee department library",
+    "category": "reliability_non_empty",
+    "expected_behavior": "Never return empty/blank output. If not found in sources, provide a clean NOT_FOUND response.",
+    "answer": "\n\nBased on the official GPREC sources, the Department of Electrical and Electronics Engineering (EEE) is headed by **Dr. G. Kishor**. \n\nIf you are asking about the Central Library, it is headed by a senior faculty member as the **Library in-charge** (supported by a Librarian and assistants), but the specific name of the Library in-charge is not detailed in the available sources.",
+    "sources": [
+      {
+        "title": "Central Library – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/libraries/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Central Library – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/libraries/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Central Library – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/campus-life/libraries/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Electrical and Electronics Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electrical-and-electronics-engineering/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Electrical and Electronics Engineering – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/programs-offered/electrical-and-electronics-engineering/",
+        "page": null,
+        "published_date": null
+      }
+    ],
+    "confidence": "High",
+    "latency_sec": 15.58,
+    "check_passed": true,
+    "check_reason": "Answer is non-empty."
+  },
+  {
+    "id": 13,
+    "query": "detail information about the exam time table",
+    "category": "exams_ambiguity",
+    "expected_behavior": "Ambiguity handling: query lacks branch/semester. Ask via CLARIFY or show 5 newest matching notices with links, never dump 30 bullet points.",
+    "answer": "\n\nBased on the official GPREC exam time table sources, here are the available exam schedules and notifications:\n\n**From the Exam Time Table page (Source 1-3):**\n- **02-03-2026**: M.Tech First Semester seating plan (March 2026)\n- **02-03-2026**: Timetables for M.Tech I Sem (Reg S-2025) and M.Tech I & II Sem (Supp S-2022) End Examinations (March 2026)\n- **15-02-2026**: IV & VI Sem II Sessional Exam Time Table (March 2026)\n- **14-02-2026**: Notification for Registration of End Examinations for B.Tech IV, VI (S-23), VIII Sem (S-20) Regular & Supplementary Exams (April 2026) — including fee details for Scheme-23, Scheme-20, and Scheme-17.\n\n**Additional exam-related items from the main college site (Sources 4-15):**\n- June 2026 sessional and end-exam timetables, seating plans, and fee details for I & II Sem B.Tech.\n- April 2026 practical exam schedules, revaluation notifications, and results for B.Tech IV, VI, VIII Sem and M.Tech I, II Sem.\n- Hall ticket downloads for B.Tech I/II Sem (Scheme-2023) end exams (June 2026).\n\nFor the full, detailed time tables and downloadable PDFs, you can visit the official **Exam Time Table** page:  \n👉 [https://www.gprec.ac.in/academics/examinations/exam-time-table/](https://www.gprec.ac.in/academics/examinations/exam-time-table/)\n\nIf you need specific exam dates or hall tickets, please let me know your semester and branch!",
+    "sources": [
+      {
+        "title": "Exam Time Table – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/academics/examinations/exam-time-table/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Exam Time Table – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/academics/examinations/exam-time-table/",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "Exam Time Table – GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://www.gprec.ac.in/academics/examinations/exam-time-table/",
+        "page": null,
+        "published_date": "2026-03-02T00:00:00"
+      },
+      {
+        "title": "GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://gprec.ac.in",
+        "page": null,
+        "published_date": null
+      },
+      {
+        "title": "GPREC > G.Pulla Reddy Engineering College – Kurnool, AP, INDIA",
+        "source_url": "https://gprec.ac.in",
+        "page": null,
+        "published_date": null
+      }
+    ],
+    "confidence": "High",
+    "latency_sec": 15.08,
+    "check_passed": true,
+    "check_reason": "Passed bullet count check."
+  }
+]

@@ -1,0 +1,80 @@
+[
+  {
+    "id": 1,
+    "query": "give me the information regarding the placements",
+    "category": "placements",
+    "expected_behavior": "Return factual placement statistics/records from official sources, no hallucinated packages or numbers, single clean response."
+  },
+  {
+    "id": 2,
+    "query": "details about eee department faculties list and their designations",
+    "category": "departments_faculty",
+    "expected_behavior": "List EEE faculty members and their official designations strictly matching retrieved text."
+  },
+  {
+    "id": 3,
+    "query": "list the PhD faculties",
+    "category": "ambiguity_faculty",
+    "expected_behavior": "Ambiguity handling: query lacks department. Must ask CLARIFY (Which department?) or explicitly state the department scope. Strictly count only people with explicit doctorate (Dr. prefix or Ph.D degree)."
+  },
+  {
+    "id": 4,
+    "query": "list the phd faculties of eee department",
+    "category": "forbid_inference_faculty",
+    "expected_behavior": "Forbid inference: Only list persons explicitly confirmed with doctorate ('Dr.' or Ph.D). Being a jury member or resource person is NOT evidence. If incomplete, state 'the sources only confirm X of Y'."
+  },
+  {
+    "id": 5,
+    "query": "information about the boys hostel",
+    "category": "hostel",
+    "expected_behavior": "Non-empty hostel details, facilities, rules from official sources. Never expose private phone numbers or default credentials."
+  },
+  {
+    "id": 6,
+    "query": "about the clubs in college",
+    "category": "clubs",
+    "expected_behavior": "Non-empty information on student clubs/activities from official college sources without hallucination."
+  },
+  {
+    "id": 7,
+    "query": "give me detail information about each and every faculty in eee department",
+    "category": "departments_faculty",
+    "expected_behavior": "Grounded faculty details without fabricating designations or private personal phone numbers/emails."
+  },
+  {
+    "id": 8,
+    "query": "who is the principal of this college",
+    "category": "leadership",
+    "expected_behavior": "Answer college leadership (Principal: Dr. B. Sreenivasa Reddy) from directory/official source, or explain missing coverage."
+  },
+  {
+    "id": 9,
+    "query": "information about ITCA",
+    "category": "acronyms_dates",
+    "expected_behavior": "No crawl/first_seen date presented as notice date; do NOT expand ITCA unless expansion explicitly appears in source."
+  },
+  {
+    "id": 10,
+    "query": "what is fee structure of EEE department",
+    "category": "fees_ambiguity",
+    "expected_behavior": "Single clean response (no duplicate plain text + not found card). Give real fee amounts with academic year / as-of date or clearly state document status."
+  },
+  {
+    "id": 11,
+    "query": "information about library",
+    "category": "library",
+    "expected_behavior": "Library resources and timings. Filter out unrelated sources like Alumni or RTI."
+  },
+  {
+    "id": 12,
+    "query": "who is the head of eee department library",
+    "category": "reliability_non_empty",
+    "expected_behavior": "Never return empty/blank output. If not found in sources, provide a clean NOT_FOUND response."
+  },
+  {
+    "id": 13,
+    "query": "detail information about the exam time table",
+    "category": "exams_ambiguity",
+    "expected_behavior": "Ambiguity handling: query lacks branch/semester. Ask via CLARIFY or show 5 newest matching notices with links, never dump 30 bullet points."
+  }
+]

@@ -1,0 +1,55 @@
+# Environment variables
+.env
+.env.local
+
+# Python runtime / virtual environment
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# SQLite Databases & large binaries
+*.db
+*.sqlite
+*.sqlite3
+gprec_knowledge.db
+
+# Data directories (preserve directory structure via .gitkeep)
+data/website/*
+data/pdf/*
+data/notices/*
+data/processed/*
+!data/website/.gitkeep
+!data/pdf/.gitkeep
+!data/notices/.gitkeep
+!data/processed/.gitkeep
+
+# Vector store & temporary reports
+vectorstore/*
+!vectorstore/.gitkeep
+reports/*
+!reports/.gitkeep
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temporary & Build artifacts
+.pptx-build/
+deliverables/
+
+
+# Editor / IDE configs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
