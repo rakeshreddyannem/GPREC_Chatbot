@@ -5,10 +5,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import time
 import requests
 import re
+import urllib.robotparser
+import logging
 from urllib.parse import urljoin, urldefrag, urlparse, unquote
 from bs4 import BeautifulSoup
 from datetime import datetime
-from typing import List, Set, Dict, Any
+from typing import List, Set, Dict, Any, Optional
 import json
 
 import config
@@ -22,6 +24,8 @@ class GPRECCrawler:
         self.change_detector = ChangeDetector(self.db)
         self.visited_urls: Set[str] = set()
         self.failed_urls: Set[str] = set()
+        self.disallowed_urls: List[str] = []
+        self.crawl_delay: float = getattr(config, "CRAWL_DELAY", 1.0)
         self.stats = {
             "total_discovered": 0,
             "total_processed": 0,
@@ -35,6 +39,7 @@ class GPRECCrawler:
         }
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": config.USER_AGENT})
+        self.rp: Optional[urllib.robotparser.RobotFileParser] = self.get_robots_txt()
 
     def normalize_url(self, url: str) -> str:
         url, _ = urldefrag(url)
@@ -48,9 +53,30 @@ class GPRECCrawler:
         exts = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".csv", ".txt", ".zip"]
         return any(url.lower().endswith(ext) for ext in exts)
 
-    def get_robots_txt(self):
-        # We manually respect the delay here if we want, but simple 1.5s delay is implemented
-        pass
+    def get_robots_txt(self) -> Optional[urllib.robotparser.RobotFileParser]:
+        """Loads https://gprec.ac.in/robots.txt once. If it cannot be fetched, logs a warning and continues."""
+        robots_url = "https://gprec.ac.in/robots.txt"
+        rp = urllib.robotparser.RobotFileParser()
+        try:
+            resp = self.session.get(robots_url, timeout=config.REQUEST_TIMEOUT)
+            if resp.status_code == 200:
+                rp.parse(resp.text.splitlines())
+                delay = rp.crawl_delay(config.USER_AGENT)
+                if delay is not None:
+                    try:
+                        self.crawl_delay = float(delay)
+                        print(f"Honouring robots.txt Crawl-delay: {self.crawl_delay}s")
+                    except (ValueError, TypeError):
+                        pass
+                return rp
+            else:
+                logging.warning(f"Could not fetch robots.txt (status {resp.status_code}). Continuing without robots filter.")
+                print(f"WARNING: Could not fetch robots.txt from {robots_url} (status {resp.status_code}). Continuing crawl.")
+                return None
+        except Exception as e:
+            logging.warning(f"Could not fetch robots.txt: {e}. Continuing without robots filter.")
+            print(f"WARNING: Could not fetch robots.txt from {robots_url}: {e}. Continuing crawl.")
+            return None
 
     def crawl_page(self, url: str) -> List[str]:
         """Crawls a single page, processes it, and returns a list of discovered links."""
@@ -64,10 +90,18 @@ class GPRECCrawler:
         if self.stats["total_processed"] >= getattr(config, "MAX_PAGES", 1000):
             self.stats["total_skipped"] += 1
             return []
+
+        # Enforce robots.txt can_fetch
+        if self.rp is not None and not self.rp.can_fetch(config.USER_AGENT, url):
+            print(f"Skipping disallowed URL by robots.txt: {url}")
+            self.stats["total_skipped"] += 1
+            if url not in self.disallowed_urls:
+                self.disallowed_urls.append(url)
+            return []
             
         print(f"Crawling: {url}")
         try:
-            time.sleep(config.CRAWL_DELAY)
+            time.sleep(self.crawl_delay)
             response = self.session.get(url, timeout=config.REQUEST_TIMEOUT)
             
             # Handling PDFs (basic reporting for Phase 2)
@@ -77,6 +111,12 @@ class GPRECCrawler:
                 self.stats["total_processed"] += 1
                 print(f"  -> Discovered PDF: {url}")
                 # We skip full PDF processing in Phase 2
+                return []
+                
+            if response.status_code in [404, 410]:
+                print(f"  -> Disappeared / Removed ({response.status_code}): {url}")
+                self.db.set_page_current(url, is_current=0, status="REMOVED")
+                self.stats["removed_count"] += 1
                 return []
                 
             if response.status_code != 200:
@@ -236,9 +276,26 @@ class GPRECCrawler:
                 for nl in new_links:
                     if nl not in queue and nl not in self.visited_urls:
                         queue.append(nl)
+
+        # Detect pages that disappeared from the site in this crawl
+        if not queue:
+            current_pages = self.db.get_all_current_pages()
+            for page in current_pages:
+                p_url = page.get("source_url", "")
+                if p_url and self.is_valid_url(p_url) and p_url not in self.visited_urls:
+                    print(f"  -> Page disappeared from site: {p_url}")
+                    self.db.set_page_current(p_url, is_current=0, status="REMOVED")
+                    self.stats["removed_count"] += 1
                         
         print("\nCrawl Complete.")
         self.generate_report()
+        
+        try:
+            from src.notice_ingest import ingest_notices_from_documents
+            print("\nPopulating notices and deadlines from crawled documents...")
+            ingest_notices_from_documents(self.db)
+        except Exception as e:
+            print(f"Error during notice ingestion: {e}")
 
     def generate_report(self):
         report_data = {
@@ -253,7 +310,8 @@ class GPRECCrawler:
             "unchanged_count": self.stats["unchanged_count"],
             "removed_count": self.stats["removed_count"],
             "details": {
-                "failed_urls": list(self.failed_urls)
+                "failed_urls": list(self.failed_urls),
+                "disallowed_urls": list(self.disallowed_urls)
             }
         }
         self.db.save_crawl_report(report_data)

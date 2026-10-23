@@ -163,7 +163,11 @@ class ChunkDeduplicator:
             if not is_near_duplicate:
                 seen_hashes.add(content_hash)
                 token_sets.append(current_tokens)
-                chunk["content_hash"] = content_hash
+                chunk["chunk_hash"] = content_hash
+                if not chunk.get("content_hash"):
+                    chunk["content_hash"] = content_hash
+                if "version" not in chunk:
+                    chunk["version"] = 1
                 kept_chunks.append(chunk)
 
         return kept_chunks

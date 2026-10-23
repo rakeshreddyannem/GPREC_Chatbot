@@ -1,171 +1,1016 @@
-/* UI Theme CSS for GPREC Student Assistant */
+/* ==========================================================================
+   GPREC AI Student Assistant - Modern Production Slate Theme
+   Color Palette: Slate-50 (#f8fafc), Slate-900 (#0f172a), GPREC Warm Amber (#d97706)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --primary-navy: #0f172a;
-  --accent-gold: #f59e0b;
-  --bg-neutral: #f8fafc;
-  --text-main: #1e293b;
-  --text-muted: #64748b;
-  --white: #ffffff;
-  --border-light: #e2e8f0;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --radius-lg: 12px;
+  /* Slate Theme Core Palette */
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+
+  /* GPREC Warm Amber Accents */
+  --amber-50: #fffbeb;
+  --amber-100: #fef3c7;
+  --amber-200: #fde68a;
+  --amber-300: #fcd34d;
+  --amber-400: #fbbf24;
+  --amber-500: #f59e0b;
+  --amber-600: #d97706;  /* Primary warm amber */
+  --amber-700: #b45309;  /* Dark amber hover */
+  --amber-800: #92400e;
+  --amber-900: #78350f;
+
+  /* Status Colors */
+  --emerald-500: #10b981;
+  --emerald-50: #ecfdf5;
+  --emerald-700: #047857;
+  --blue-600: #2563eb;
+  --blue-50: #eff6ff;
+
+  /* Shadows */
+  --shadow-subtle: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --shadow-card: 0 4px 12px -2px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.03);
+  --shadow-card-hover: 0 10px 24px -4px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
+  --shadow-input-focus: 0 4px 20px -2px rgba(217, 119, 6, 0.16), 0 0 0 3px rgba(217, 119, 6, 0.12);
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
 }
 
 /* Base resets & typography */
 html, body, [class*="css"] {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  color: var(--slate-900) !important;
+  background-color: var(--slate-50) !important;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Header container styling */
+/* App Background & Layout Container */
+[data-testid="stAppViewContainer"] {
+  background-color: var(--slate-50) !important;
+}
+
+/* Center main column with comfortable reading width on desktop (1440px) */
+.main .block-container,
+[data-testid="stMainBlockContainer"] {
+  max-width: 880px !important;
+  padding-top: 1.5rem !important;
+  padding-bottom: 8.5rem !important;
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+}
+
+/* Keep earlier messages fully visible and readable during generation */
+[data-stale="true"] {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+/* Header Container Styling */
 .main-header {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 1rem 0;
-    margin-bottom: 2rem;
-    border-bottom: 2px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 0 1.5rem 0;
+  margin-bottom: 1.75rem;
+  border-bottom: 1px solid var(--slate-200);
 }
 
-.main-header img {
-    height: 50px;
-    object-fit: contain;
+.main-header img.college-logo {
+  height: 52px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.08));
 }
 
-.main-header h1 {
-    color: var(--primary-navy);
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin: 0;
-    padding: 0;
+.main-header .header-text h1 {
+  color: var(--slate-900);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+  padding: 0;
+  line-height: 1.2;
 }
 
-.main-header p {
-    color: var(--text-muted);
-    margin: 0;
-    font-size: 0.9rem;
+.main-header .header-text p {
+  color: var(--slate-500);
+  margin: 0.25rem 0 0 0;
+  font-size: 0.92rem;
+  font-weight: 500;
 }
 
-.badge {
-    display: inline-block;
-    background-color: #e2e8f0;
-    color: #334155;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    margin-top: 4px;
+.badge-amber {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background-color: var(--amber-50);
+  color: var(--amber-800);
+  border: 1px solid var(--amber-200);
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  margin-top: 0.45rem;
 }
 
-/* Chat container styles */
-.stChatMessage {
-    background-color: transparent !important;
-}
+/* ==========================================================================
+   SIDEBAR & MODERN NAVIGATION PILL TABS
+   ========================================================================== */
 
-[data-testid="stChatMessageContent"] {
-    padding: 1.25rem !important;
-    border-radius: var(--radius-lg) !important;
-    box-shadow: var(--shadow-sm);
-    line-height: 1.6;
-}
-
-/* User Message */
-[data-testid="chatAvatarIcon-user"] {
-    background-color: var(--primary-navy) !important;
-}
-.stChatMessage:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] {
-    background-color: var(--bg-neutral) !important;
-    border: 1px solid var(--border-light);
-    color: var(--text-main);
-}
-
-/* Assistant Message */
-[data-testid="chatAvatarIcon-assistant"] {
-    background-color: var(--accent-gold) !important;
-}
-.stChatMessage:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] {
-    background-color: var(--white) !important;
-    border: 1px solid var(--border-light);
-    color: var(--text-main);
-}
-
-/* Chat Input Styling */
-[data-testid="stChatInput"] {
-    border-radius: var(--radius-lg) !important;
-    border: 1px solid var(--border-light) !important;
-    box-shadow: var(--shadow-md) !important;
-}
-[data-testid="stChatInput"]:focus-within {
-    border-color: var(--accent-gold) !important;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2) !important;
-}
-
-/* Quick Actions Sidebar */
 [data-testid="stSidebar"] {
-    background-color: var(--white);
-    border-right: 1px solid var(--border-light);
+  background-color: var(--slate-50) !important;
+  border-right: 1px solid var(--slate-200) !important;
 }
 
+[data-testid="stSidebar"] > div:first-child {
+  padding-top: 1.5rem !important;
+  padding-bottom: 2rem !important;
+}
+
+/* Sidebar Headings */
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+  color: var(--slate-800) !important;
+  font-weight: 700 !important;
+  font-size: 0.82rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  margin-bottom: 0.75rem !important;
+}
+
+/* Pill Tabs Radio Buttons Container */
+[data-testid="stRadio"] div[role="radiogroup"] {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  width: 100% !important;
+}
+
+/* Hide default circular radio button input */
+[data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child {
+  display: none !important;
+}
+
+/* Style each navigation option as a modern pill tab */
+[data-testid="stRadio"] div[role="radiogroup"] > label {
+  width: 100% !important;
+  padding: 0.65rem 0.95rem !important;
+  border-radius: 10px !important;
+  background-color: transparent !important;
+  color: var(--slate-600) !important;
+  font-size: 0.92rem !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
+  border: 1px solid transparent !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+}
+
+/* Hover state for pill tabs */
+[data-testid="stRadio"] div[role="radiogroup"] > label:hover {
+  background-color: var(--slate-100) !important;
+  color: var(--slate-900) !important;
+  border-color: var(--slate-200) !important;
+  transform: translateX(2px) !important;
+}
+
+/* Active/Selected pill tab */
+[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked),
+[data-testid="stRadio"] div[role="radiogroup"] > label[aria-checked="true"] {
+  background-color: #ffffff !important;
+  color: var(--slate-900) !important;
+  font-weight: 600 !important;
+  border: 1px solid var(--slate-200) !important;
+  border-left: 3.5px solid var(--amber-600) !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
+  transform: translateX(3px) !important;
+}
+
+[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) p,
+[data-testid="stRadio"] div[role="radiogroup"] > label[aria-checked="true"] p {
+  color: var(--slate-900) !important;
+  font-weight: 600 !important;
+}
+
+/* Sidebar divider */
+[data-testid="stSidebar"] hr {
+  margin: 1.25rem 0 !important;
+  border: none !important;
+  border-top: 1px solid var(--slate-200) !important;
+}
+
+/* ==========================================================================
+   KNOWLEDGE BASE STATUS CARD WITH PULSING GREEN INDICATOR
+   ========================================================================== */
+
+.kb-status-card {
+  background: #ffffff;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin-top: 1.5rem;
+  box-shadow: var(--shadow-subtle);
+  transition: all 0.2s ease;
+}
+
+.kb-status-card:hover {
+  border-color: var(--slate-300);
+  box-shadow: var(--shadow-card);
+}
+
+.kb-status-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0.65rem;
+}
+
+.kb-status-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--slate-800);
+  letter-spacing: -0.01em;
+}
+
+/* Pulsing Green Indicator */
+.status-indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.status-pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--emerald-500);
+  border-radius: 50%;
+  z-index: 2;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+}
+
+.status-pulse-ring {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: rgba(16, 185, 129, 0.35);
+  animation: status-ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes status-ping {
+  0% { transform: scale(0.6); opacity: 1; }
+  75%, 100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* Indexed badge */
+.kb-index-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--emerald-50);
+  color: var(--emerald-700);
+  border: 1px solid #a7f3d0;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-bottom: 0.65rem;
+}
+
+.kb-index-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--emerald-500);
+}
+
+.kb-status-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 0.6rem;
+  font-size: 0.8rem;
+  border-top: 1px solid var(--slate-100);
+  padding-top: 0.55rem;
+}
+
+.kb-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kb-detail-label {
+  color: var(--slate-500);
+}
+
+.kb-detail-val {
+  color: var(--slate-800);
+  font-weight: 500;
+}
+
+.kb-disclaimer {
+  font-size: 0.74rem;
+  color: var(--slate-400);
+  line-height: 1.35;
+  margin-top: 0.25rem;
+}
+
+/* ==========================================================================
+   CHAT MESSAGES & BUBBLE STYLING
+   ========================================================================== */
+
+.stChatMessage {
+  background-color: transparent !important;
+  padding: 0.5rem 0 !important;
+}
+
+/* User Message: Neat, right-aligned slate bubbles with subtle border */
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
+  flex-direction: row-reverse !important;
+  gap: 0.75rem !important;
+}
+
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] {
+  background-color: var(--slate-100) !important;
+  color: var(--slate-900) !important;
+  border: 1px solid var(--slate-200) !important;
+  border-radius: 18px 18px 4px 18px !important;
+  padding: 0.85rem 1.25rem !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+  max-width: 82% !important;
+  margin-left: auto !important;
+  font-size: 0.95rem !important;
+  line-height: 1.55 !important;
+}
+
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] p {
+  color: var(--slate-900) !important;
+  margin: 0 !important;
+}
+
+[data-testid="chatAvatarIcon-user"] {
+  background-color: var(--slate-900) !important;
+  color: #ffffff !important;
+  border-radius: 10px !important;
+  width: 32px !important;
+  height: 32px !important;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.12) !important;
+}
+
+/* Assistant Message: Clean white card bubble with subtle border */
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
+  flex-direction: row !important;
+  gap: 0.75rem !important;
+}
+
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] {
+  background-color: #ffffff !important;
+  color: var(--slate-800) !important;
+  border: 1px solid var(--slate-200) !important;
+  border-radius: 18px 18px 18px 4px !important;
+  padding: 1.25rem 1.4rem !important;
+  box-shadow: var(--shadow-card) !important;
+  max-width: 92% !important;
+  font-size: 0.95rem !important;
+  line-height: 1.65 !important;
+}
+
+[data-testid="chatAvatarIcon-assistant"] {
+  background: linear-gradient(135deg, var(--amber-600) 0%, var(--amber-700) 100%) !important;
+  color: #ffffff !important;
+  border-radius: 10px !important;
+  width: 32px !important;
+  height: 32px !important;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.25) !important;
+}
+
+/* Assistant markdown elements */
+[data-testid="stChatMessageContent"] h1,
+[data-testid="stChatMessageContent"] h2,
+[data-testid="stChatMessageContent"] h3,
+[data-testid="stChatMessageContent"] h4 {
+  color: var(--slate-900) !important;
+  font-weight: 700 !important;
+  margin-top: 1rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+[data-testid="stChatMessageContent"] p {
+  margin-bottom: 0.75rem !important;
+}
+
+[data-testid="stChatMessageContent"] strong {
+  color: var(--slate-900) !important;
+  font-weight: 600 !important;
+}
+
+[data-testid="stChatMessageContent"] ul,
+[data-testid="stChatMessageContent"] ol {
+  padding-left: 1.35rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+[data-testid="stChatMessageContent"] li {
+  margin-bottom: 0.4rem !important;
+}
+
+/* ==========================================================================
+   INPUT BOX RESTYLING (st.chat_input)
+   ========================================================================== */
+
+/* Outer floating input wrapper */
+[data-testid="stChatInput"] {
+  border-radius: var(--radius-xl) !important;
+  border: 1px solid var(--slate-300) !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08) !important;
+  padding: 4px 8px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Smooth Focus Ring & Amber Glow */
+[data-testid="stChatInput"]:focus-within {
+  border-color: var(--amber-600) !important;
+  box-shadow: var(--shadow-input-focus) !important;
+}
+
+/* Textarea inside chat input */
+[data-testid="stChatInput"] textarea {
+  font-size: 0.95rem !important;
+  color: var(--slate-900) !important;
+  font-family: inherit !important;
+  caret-color: var(--amber-600) !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0.75rem 1rem !important;
+  line-height: 1.5 !important;
+}
+
+[data-testid="stChatInput"] textarea::placeholder {
+  color: var(--slate-400) !important;
+  font-weight: 400 !important;
+}
+
+/* Send button inside chat input */
+[data-testid="stChatInput"] button {
+  border-radius: 50% !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: transparent !important;
+  color: var(--slate-500) !important;
+  border: none !important;
+  transition: all 0.2s ease !important;
+}
+
+[data-testid="stChatInput"] button:hover:not(:disabled) {
+  background-color: var(--amber-100) !important;
+  color: var(--amber-700) !important;
+  transform: scale(1.06) !important;
+}
+
+[data-testid="stChatInput"] button svg {
+  fill: currentColor !important;
+}
+
+/* ==========================================================================
+   FACULTY CARDS - CLEAN CUSTOM HTML/CSS
+   ========================================================================== */
+
+.faculty-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  background: #ffffff;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin: 0.85rem 0;
+  box-shadow: var(--shadow-card);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.faculty-card:hover {
+  border-color: var(--slate-300);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+/* Photo Media */
+.faculty-card-media {
+  flex-shrink: 0;
+  width: 105px;
+  height: 125px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--slate-200);
+  background: var(--slate-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.faculty-card-media img.faculty-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+/* Fallback Avatar Placeholder */
+.faculty-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--slate-100) 0%, var(--slate-200) 100%);
+  color: var(--slate-400);
+}
+
+.faculty-avatar-icon {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.faculty-avatar-initials {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--slate-600);
+  margin-top: 4px;
+}
+
+/* Card Content Area */
+.faculty-card-content {
+  flex: 1;
+  min-width: 0; /* Prevents flex overflow */
+}
+
+.faculty-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.45rem;
+}
+
+.faculty-name {
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: var(--slate-900);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.faculty-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Canonical Designation Badge */
+.fac-badge-desig {
+  background: var(--slate-100);
+  color: var(--slate-800);
+  border: 1px solid var(--slate-200);
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* HOD Indicator Badge */
+.fac-badge-hod {
+  background: var(--amber-100);
+  color: var(--amber-900);
+  border: 1px solid var(--amber-300);
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Details List */
+.faculty-details-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 0.4rem;
+  font-size: 0.88rem;
+}
+
+.faculty-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--slate-700);
+  flex-wrap: wrap;
+}
+
+.fac-icon {
+  font-size: 0.95rem;
+  color: var(--slate-400);
+  display: inline-block;
+  width: 18px;
+  text-align: center;
+}
+
+.fac-label {
+  color: var(--slate-500);
+  font-weight: 500;
+}
+
+.fac-val {
+  color: var(--slate-800);
+  font-weight: 500;
+}
+
+.fac-val-muted {
+  color: var(--slate-400);
+  font-style: italic;
+}
+
+/* Copy-friendly Email Link & Button */
+.fac-email-link {
+  color: var(--blue-600);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.fac-email-link:hover {
+  color: var(--amber-700);
+  text-decoration: underline;
+}
+
+.fac-copy-btn {
+  background: var(--slate-100);
+  color: var(--slate-700);
+  border: 1px solid var(--slate-200);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 6px;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.fac-copy-btn:hover {
+  background: var(--slate-200);
+  color: var(--slate-900);
+  border-color: var(--slate-300);
+}
+
+.fac-copy-btn.copied {
+  background: var(--emerald-50) !important;
+  color: var(--emerald-700) !important;
+  border-color: #a7f3d0 !important;
+}
+
+/* Profile Document Link */
+.faculty-card-actions {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--slate-100);
+}
+
+.fac-profile-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ffffff;
+  color: var(--slate-700);
+  border: 1px solid var(--slate-200);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.fac-profile-link:hover {
+  background: var(--slate-50);
+  color: var(--amber-700);
+  border-color: var(--amber-300);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   SLEEK LOADING SKELETON
+   ========================================================================== */
+
+.skeleton-card {
+  background: #ffffff;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.4rem;
+  margin: 0.5rem 0;
+  box-shadow: var(--shadow-subtle);
+}
+
+.skeleton-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1.15rem;
+}
+
+.skeleton-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.skeleton-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeleton-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 1.1rem;
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+}
+
+/* Shimmer Animation */
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.8s infinite ease-in-out;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--slate-100);
+}
+
+.skeleton-spinner-ring {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--slate-200);
+  border-top-color: var(--amber-600);
+  border-radius: 50%;
+  animation: skeleton-spin 0.8s linear infinite;
+}
+
+@keyframes skeleton-spin {
+  to { transform: rotate(360deg); }
+}
+
+.skeleton-footer-text {
+  font-size: 0.82rem;
+  color: var(--slate-500);
+  font-weight: 500;
+}
+
+/* Standard st.spinner polish fallback */
+.stSpinner > div {
+  border-color: var(--amber-600) transparent transparent transparent !important;
+}
+
+/* ==========================================================================
+   BUTTONS, EXPANDERS & MISCELLANEOUS STREAMLIT COMPONENTS
+   ========================================================================== */
+
+/* Buttons (Regular st.button) */
 .stButton > button {
-    width: 100%;
-    border-radius: 8px !important;
-    border: 1px solid var(--border-light) !important;
-    background-color: var(--white) !important;
-    color: var(--primary-navy) !important;
-    font-weight: 500 !important;
-    padding: 0.75rem 1rem !important;
-    transition: all 0.2s ease !important;
+  width: 100%;
+  border-radius: var(--radius-sm) !important;
+  border: 1px solid var(--slate-200) !important;
+  background-color: #ffffff !important;
+  color: var(--slate-800) !important;
+  font-weight: 500 !important;
+  padding: 0.65rem 1rem !important;
+  font-size: 0.88rem !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: var(--shadow-subtle) !important;
 }
 
 .stButton > button:hover {
-    border-color: var(--accent-gold) !important;
-    color: var(--accent-gold) !important;
-    background-color: var(--bg-neutral) !important;
+  border-color: var(--amber-300) !important;
+  color: var(--amber-700) !important;
+  background-color: var(--amber-50) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: var(--shadow-card) !important;
 }
 
-/* Sources Expander Styling */
+.stButton > button:active {
+  transform: translateY(0) !important;
+}
+
+/* Primary Button */
+.stButton > button[kind="primary"] {
+  background-color: var(--amber-600) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--amber-700) !important;
+  font-weight: 600 !important;
+}
+
+.stButton > button[kind="primary"]:hover {
+  background-color: var(--amber-700) !important;
+  border-color: var(--amber-800) !important;
+  color: #ffffff !important;
+}
+
+/* Link Button (st.link_button) */
+a[data-testid="baseLinkButton-secondary"] {
+  border-radius: 20px !important;
+  border: 1px solid var(--slate-200) !important;
+  background-color: #ffffff !important;
+  color: var(--slate-700) !important;
+  font-size: 0.84rem !important;
+  font-weight: 500 !important;
+  padding: 0.35rem 0.9rem !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+a[data-testid="baseLinkButton-secondary"]:hover {
+  border-color: var(--amber-300) !important;
+  background-color: var(--amber-50) !important;
+  color: var(--amber-800) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Expanders */
 .streamlit-expanderHeader {
-    font-weight: 600;
-    color: var(--text-muted);
+  font-weight: 600 !important;
+  color: var(--slate-700) !important;
+  border-radius: var(--radius-sm) !important;
 }
+
 .streamlit-expanderContent {
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    background: var(--bg-neutral);
-    border-radius: 8px;
-    padding: 1rem;
+  background: var(--slate-50) !important;
+  border-radius: var(--radius-sm) !important;
+  border: 1px solid var(--slate-200) !important;
+  padding: 1rem !important;
 }
 
-/* Markdown tweaks for assistant */
-.stMarkdown h3 {
-    color: var(--primary-navy);
-    font-size: 1.25rem;
-    margin-top: 1rem;
+/* Quick Question Chip Cards in Welcome State */
+.welcome-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 1.25rem 0 2rem 0;
 }
 
-.stMarkdown ul, .stMarkdown ol {
-    padding-left: 1.5rem;
+.welcome-chip {
+  background: #ffffff;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-md);
+  padding: 0.9rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.stMarkdown li {
-    margin-bottom: 0.5rem;
+.welcome-chip:hover {
+  border-color: var(--amber-300);
+  background: var(--amber-50);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
 }
 
-/* Hide heading anchor links */
-.stMarkdown a.header-anchor {
-    display: none !important;
+.welcome-chip .chip-title {
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--slate-900);
 }
+
+.welcome-chip .chip-sub {
+  font-size: 0.78rem;
+  color: var(--slate-500);
+}
+
+/* Hide header anchor links */
+.stMarkdown a.header-anchor,
 .stMarkdown h1 a.anchor-link, 
 .stMarkdown h2 a.anchor-link, 
 .stMarkdown h3 a.anchor-link,
 .stMarkdown h4 a.anchor-link,
 .stMarkdown h5 a.anchor-link,
 .stMarkdown h6 a.anchor-link {
-    display: none !important;
+  display: none !important;
 }
 
-/* Darken small text for contrast */
+/* Small text contrast */
 small {
-    color: #475569 !important;
+  color: var(--slate-500) !important;
+}
+
+/* ==========================================================================
+   RESPONSIVENESS (Desktop 1440px to Mobile Viewports)
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .main .block-container,
+  [data-testid="stMainBlockContainer"] {
+    padding-left: 0.85rem !important;
+    padding-right: 0.85rem !important;
+    padding-top: 1rem !important;
+  }
+
+  .main-header {
+    flex-direction: row;
+    gap: 0.9rem;
+    padding: 0.85rem 0 1rem 0;
+  }
+
+  .main-header .header-text h1 {
+    font-size: 1.35rem;
+  }
+
+  .faculty-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .faculty-card-media {
+    width: 95px;
+    height: 110px;
+  }
+
+  .faculty-card-header {
+    justify-content: center;
+  }
+
+  .faculty-badges {
+    justify-content: center;
+  }
+
+  .faculty-detail-item {
+    justify-content: center;
+  }
+
+  .faculty-card-actions {
+    text-align: center;
+  }
+
+  [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] {
+    max-width: 90% !important;
+  }
+
+  [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] {
+    max-width: 96% !important;
+    padding: 1rem !important;
+  }
 }

@@ -18,6 +18,8 @@ build/
 *.db
 *.sqlite
 *.sqlite3
+*.bak
+*.db.bak
 gprec_knowledge.db
 
 # Data directories (preserve directory structure via .gitkeep)

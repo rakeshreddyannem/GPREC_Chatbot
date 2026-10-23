@@ -1,6 +1,8 @@
 import sys
 import sqlite3
 import json
+import re
+import difflib
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -185,7 +187,7 @@ class DatabaseManager:
                     attribute TEXT,
                     value TEXT,
                     source_url TEXT,
-                    verified_by TEXT DEFAULT 'admin',
+                    verified_by TEXT,
                     verified_date TEXT,
                     updated_at TEXT,
                     is_active INTEGER DEFAULT 1,
@@ -211,8 +213,44 @@ class DatabaseManager:
                 )
             """)
 
+            # 10. Faculty Table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS faculty (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    designation TEXT,
+                    qualification TEXT,
+                    department TEXT NOT NULL,
+                    email TEXT,
+                    photo_url TEXT,
+                    photo_path TEXT,
+                    profile_url TEXT,
+                    is_guest INTEGER DEFAULT 0,
+                    is_hod INTEGER DEFAULT 0,
+                    source_url TEXT,
+                    last_checked TEXT,
+                    is_active INTEGER DEFAULT 1,
+                    UNIQUE(name, department)
+                )
+            """)
+
+            # 11. Answer Cache Table (SQLite cache with 24-hour expiry)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS answer_cache (
+                    normalized_query TEXT PRIMARY KEY,
+                    response_json TEXT,
+                    created_at REAL
+                )
+            """)
+
+            try:
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_faculty_dept ON faculty(department)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_faculty_name ON faculty(name)")
+            except Exception:
+                pass
+
             # Migrate any missing columns in verified_facts
-            for col, ctype in [("question_key", "TEXT"), ("verified_by", "TEXT DEFAULT 'admin'"), ("verified_date", "TEXT")]:
+            for col, ctype in [("question_key", "TEXT"), ("verified_by", "TEXT"), ("verified_date", "TEXT")]:
                 try:
                     cursor.execute(f"ALTER TABLE verified_facts ADD COLUMN {col} {ctype}")
                 except Exception:
@@ -227,8 +265,15 @@ class DatabaseManager:
                 ("exam_month_year", "TEXT"),
                 ("attachment_urls", "TEXT"),
                 ("source_page", "TEXT"),
+                ("parent_page_url", "TEXT"),
+                ("document_url", "TEXT"),
                 ("raw_text", "TEXT"),
-                ("is_active", "INTEGER DEFAULT 1")
+                ("is_active", "INTEGER DEFAULT 1"),
+                ("category", "TEXT"),
+                ("department", "TEXT"),
+                ("date_source", "TEXT"),
+                ("deadline_date", "TEXT"),
+                ("last_checked", "TEXT")
             ]
             for col, ctype in notice_cols:
                 try:
@@ -236,7 +281,21 @@ class DatabaseManager:
                 except Exception:
                     pass
 
+            # Create unique indexes so document_url / source_url never produce duplicates
+            try:
+                cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_notices_document_url ON notices(document_url)")
+            except Exception:
+                pass
+
+            try:
+                cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_deadlines_source_url ON deadlines(source_url)")
+            except Exception:
+                pass
+
             conn.commit()
+
+        # One-time cleanup for old seeded demo rows
+        self._cleanup_old_seed()
 
         # Seed curated acronyms, entity directory, verified facts, and default notices
         self._seed_curated_acronyms()
@@ -244,7 +303,57 @@ class DatabaseManager:
         self._seed_entity_directory()
         self._seed_default_notices()
 
+    def _cleanup_old_seed(self):
+        """One-time cleanup: deletes any rows whose source is the old demo seed."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            removed_total = 0
+
+            # 1. Clean old seeded notices
+            cursor.execute("""
+                DELETE FROM notices 
+                WHERE attachment_urls LIKE '%/pdf/exam_cell/%'
+                   OR source_page = 'http://examcell.gprec.ac.in/'
+                   OR attachment_urls = 'https://gprec.ac.in/pdf/admissions/APHERMC_Tuition_Fee_Notification_GPREC.pdf'
+            """)
+            removed_notices = cursor.rowcount
+            if removed_notices > 0:
+                removed_total += removed_notices
+
+            # 2. Clean old seeded verified_facts
+            cursor.execute("""
+                DELETE FROM verified_facts 
+                WHERE verified_by = 'admin' 
+                   OR question_key IN ('principal', 'placements', 'hod_eee', 'central_library', 'library_eee', 'boys_hostel', 'fee_structure')
+            """)
+            removed_facts = cursor.rowcount
+            if removed_facts > 0:
+                removed_total += removed_facts
+
+            # 3. Clean old seeded entity_directory
+            old_entity_names = [
+                "Dr. B. Sreenivasa Reddy", "Dr. G. Kishor", "Dr. S. Nagaraja Rao",
+                "Dr. N. Kasiviswanath", "Dr. K. Devaki Devi", "Dr. E. Sanjeeva Rayudu",
+                "Dr. K. Venkata Ramana", "Dr. K. Govardhan Reddy", "Dr. G. S. Kumar",
+                "Sri. P. Gopinath", "Dr. C. Harinatha Reddy"
+            ]
+            placeholders = ",".join(["?"] * len(old_entity_names))
+            cursor.execute(f"""
+                DELETE FROM entity_directory 
+                WHERE name IN ({placeholders})
+            """, old_entity_names)
+            removed_entities = cursor.rowcount
+            if removed_entities > 0:
+                removed_total += removed_entities
+
+            conn.commit()
+
+            if removed_total > 0:
+                print(f"[DatabaseManager] Cleaned up {removed_total} rows from old demo seed (notices: {removed_notices}, verified_facts: {removed_facts}, entity_directory: {removed_entities}).")
+
     def _seed_curated_acronyms(self):
+        if not getattr(config, "SEED_DEMO_DATA", False):
+            return
         default_acronyms = {
             "GPREC": ("G. Pulla Reddy Engineering College", "https://gprec.ac.in", 1),
             "EEE": ("Electrical and Electronics Engineering", "https://gprec.ac.in/programs-offered/electrical-and-electronics-engineering/", 1),
@@ -271,6 +380,8 @@ class DatabaseManager:
             conn.commit()
 
     def _seed_verified_facts(self):
+        if not getattr(config, "SEED_DEMO_DATA", False):
+            return
         from datetime import datetime
         now = datetime.now().isoformat()
         date_str = datetime.now().strftime("%Y-%m-%d")
@@ -295,6 +406,8 @@ class DatabaseManager:
             conn.commit()
 
     def _seed_entity_directory(self):
+        if not getattr(config, "SEED_DEMO_DATA", False):
+            return
         from datetime import datetime
         now = datetime.now().isoformat()
         default_entities = [
@@ -386,6 +499,8 @@ class DatabaseManager:
         return matched
 
     def _seed_default_notices(self):
+        if not getattr(config, "SEED_DEMO_DATA", False):
+            return
         default_notices = [
             {
                 "title": "B.Tech IV Sem (R20) Regular & Supplementary Examinations Timetable - April 2026",
@@ -531,7 +646,6 @@ class DatabaseManager:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             for n in default_notices:
-                # Check if notice with same title already exists
                 cursor.execute("SELECT notice_id FROM notices WHERE title = ?", (n["title"],))
                 if not cursor.fetchone():
                     cursor.execute("""
@@ -556,27 +670,108 @@ class DatabaseManager:
         sem = notice_data.get("semester") or NoticeParser.extract_semester(title, notice_data.get("raw_text", ""))
         reg = notice_data.get("scheme_regulation") or NoticeParser.extract_regulation(title, notice_data.get("raw_text", ""))
         month_yr = notice_data.get("exam_month_year") or NoticeParser.extract_exam_month_year(title, notice_data.get("raw_text", ""))
-        pub_date = notice_data.get("published_date") or NoticeParser.extract_published_date(title, notice_data.get("raw_text", ""))
+        pub_date = notice_data.get("published_date")
         att_urls = notice_data.get("attachment_urls") or ""
         if isinstance(att_urls, list):
             att_urls = ",".join(att_urls)
             
+        doc_url = notice_data.get("document_url") or notice_data.get("source_url") or ""
+        parent_page = notice_data.get("parent_page_url") or notice_data.get("source_page") or ""
+        category = notice_data.get("category") or ""
+        department = notice_data.get("department") or ""
+        date_src = notice_data.get("date_source")
+        deadline_date = notice_data.get("deadline_date")
+        last_checked = notice_data.get("last_checked")
+        is_act = notice_data.get("is_active", 1)
+        raw_text = notice_data.get("raw_text") or title
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
+            if doc_url:
+                cursor.execute("SELECT notice_id FROM notices WHERE document_url = ?", (doc_url,))
+                existing = cursor.fetchone()
+                if existing:
+                    nid = existing["notice_id"]
+                    cursor.execute("""
+                        UPDATE notices SET
+                            title = ?,
+                            notice_type = ?,
+                            program = ?,
+                            semester = ?,
+                            scheme_regulation = ?,
+                            exam_month_year = ?,
+                            published_date = ?,
+                            date_source = ?,
+                            attachment_urls = ?,
+                            source_page = ?,
+                            parent_page_url = ?,
+                            raw_text = ?,
+                            is_active = ?,
+                            category = ?,
+                            department = ?,
+                            deadline_date = ?,
+                            last_checked = ?
+                        WHERE notice_id = ?
+                    """, (
+                        title, ntype, prog, sem, reg, month_yr, pub_date, date_src,
+                        att_urls, parent_page, parent_page, raw_text, is_act,
+                        category, department, deadline_date, last_checked, nid
+                    ))
+                    conn.commit()
+                    return nid
+
             cursor.execute("""
                 INSERT INTO notices (
                     title, notice_type, program, semester, scheme_regulation, 
-                    exam_month_year, published_date, attachment_urls, source_page, 
-                    raw_text, is_active, department, source_url
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    exam_month_year, published_date, date_source, attachment_urls,
+                    source_page, parent_page_url, document_url, raw_text,
+                    is_active, category, department, deadline_date, last_checked
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                title, ntype, prog, sem, reg, month_yr, pub_date, att_urls,
-                notice_data.get("source_page", ""),
-                notice_data.get("raw_text", title),
-                notice_data.get("is_active", 1),
-                notice_data.get("department", ""),
-                notice_data.get("source_url", "")
+                title, ntype, prog, sem, reg, month_yr, pub_date, date_src, att_urls,
+                parent_page, parent_page, doc_url, raw_text, is_act,
+                category, department, deadline_date, last_checked
             ))
+            conn.commit()
+            return cursor.lastrowid
+
+    def upsert_deadline(self, deadline_data: Dict[str, Any]) -> int:
+        title = deadline_data.get("title", "")
+        category = deadline_data.get("category", "")
+        deadline_date = deadline_data.get("deadline_date")
+        published_date = deadline_data.get("published_date")
+        department = deadline_data.get("department", "")
+        source_url = deadline_data.get("source_url") or deadline_data.get("document_url") or ""
+        status = deadline_data.get("status", "ACTIVE")
+        last_checked = deadline_data.get("last_checked")
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if source_url:
+                cursor.execute("SELECT deadline_id FROM deadlines WHERE source_url = ?", (source_url,))
+                existing = cursor.fetchone()
+                if existing:
+                    did = existing["deadline_id"]
+                    cursor.execute("""
+                        UPDATE deadlines SET
+                            title = ?,
+                            category = ?,
+                            deadline_date = ?,
+                            published_date = ?,
+                            department = ?,
+                            status = ?,
+                            last_checked = ?
+                        WHERE deadline_id = ?
+                    """, (title, category, deadline_date, published_date, department, status, last_checked, did))
+                    conn.commit()
+                    return did
+
+            cursor.execute("""
+                INSERT INTO deadlines (
+                    title, category, deadline_date, published_date, department,
+                    source_url, status, last_checked
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (title, category, deadline_date, published_date, department, source_url, status, last_checked))
             conn.commit()
             return cursor.lastrowid
 
@@ -603,7 +798,7 @@ class DatabaseManager:
             if semester and semester.lower() != "all":
                 query += " AND LOWER(semester) = LOWER(?)"
                 params.append(semester)
-            query += " ORDER BY published_date DESC, notice_id DESC LIMIT ?"
+            query += " ORDER BY CASE WHEN published_date IS NOT NULL AND published_date != '' THEN published_date ELSE '1970-01-01' END DESC, notice_id DESC LIMIT ?"
             params.append(limit)
             cursor.execute(query, params)
             return [dict(row) for row in cursor.fetchall()]
@@ -624,11 +819,23 @@ class DatabaseManager:
                     LOWER(program) LIKE ? OR
                     LOWER(scheme_regulation) LIKE ?
                 )
-                ORDER BY published_date DESC LIMIT ?
+                ORDER BY CASE WHEN published_date IS NOT NULL AND published_date != '' THEN published_date ELSE '1970-01-01' END DESC, notice_id DESC LIMIT ?
             """, (q_lower, q_lower, q_lower, q_lower, q_lower, limit))
             return [dict(row) for row in cursor.fetchall()]
 
-    def upsert_verified_fact(self, category: str, entity: str, attribute: str, value: str, source_url: str = "", question_key: str = "", verified_by: str = "admin", is_active: int = 1):
+    def get_all_deadlines(self, active_only: bool = True, limit: int = 50) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT * FROM deadlines WHERE 1=1"
+            if active_only:
+                query += " AND (status = 'ACTIVE' OR status IS NULL)"
+            query += " ORDER BY CASE WHEN deadline_date IS NOT NULL AND deadline_date != '' THEN deadline_date ELSE '9999-12-31' END ASC, deadline_id DESC LIMIT ?"
+            cursor.execute(query, (limit,))
+            return [dict(row) for row in cursor.fetchall()]
+
+    def upsert_verified_fact(self, category: str, entity: str, attribute: str, value: str, source_url: str = "", question_key: str = "", verified_by: str = "", is_active: int = 1):
+        if not verified_by or verified_by.strip().lower() == "admin":
+            raise ValueError("verified_by must hold the admin name that was typed in, never a hard-coded 'admin'.")
         from datetime import datetime
         now = datetime.now().isoformat()
         date_str = datetime.now().strftime("%Y-%m-%d")
@@ -645,7 +852,7 @@ class DatabaseManager:
                     verified_date = excluded.verified_date,
                     updated_at = excluded.updated_at,
                     is_active = excluded.is_active
-            """, (question_key, category, entity, attribute, value, source_url, verified_by, date_str, now, is_active))
+            """, (question_key, category, entity, attribute, value, source_url, verified_by.strip(), date_str, now, is_active))
             conn.commit()
 
     def get_all_verified_facts(self, active_only: bool = True) -> List[Dict[str, Any]]:
@@ -737,11 +944,25 @@ class DatabaseManager:
             row = cursor.fetchone()
             return dict(row) if row else None
 
-    def get_all_current_pages(self) -> List[Dict[str, Any]]:
+    def get_all_pages(self, current_only: bool = False) -> List[Dict[str, Any]]:
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM pages WHERE is_current = 1")
+            if current_only:
+                cursor.execute("SELECT * FROM pages WHERE is_current = 1")
+            else:
+                cursor.execute("SELECT * FROM pages")
             return [dict(row) for row in cursor.fetchall()]
+
+    def get_all_current_pages(self) -> List[Dict[str, Any]]:
+        return self.get_all_pages(current_only=True)
+
+    def set_page_current(self, source_url: str, is_current: int = 0, status: str = "REMOVED"):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE pages SET is_current = ?, status = ? WHERE source_url = ?
+            """, (is_current, status, source_url))
+            conn.commit()
 
     def get_all_documents(self) -> List[Dict[str, Any]]:
         with self.get_connection() as conn:
@@ -980,6 +1201,345 @@ class DatabaseManager:
                     s_data.get("page_num")
                 ))
                 return cursor.lastrowid
+
+    # --- Faculty Directory Management Methods ---
+
+    def upsert_faculty(self, f_data: Dict[str, Any]) -> int:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO faculty (
+                    name, designation, qualification, department, email,
+                    photo_url, photo_path, profile_url, is_guest, is_hod,
+                    source_url, last_checked, is_active
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(name, department) DO UPDATE SET
+                    designation = excluded.designation,
+                    qualification = excluded.qualification,
+                    email = excluded.email,
+                    photo_url = COALESCE(excluded.photo_url, faculty.photo_url),
+                    photo_path = COALESCE(excluded.photo_path, faculty.photo_path),
+                    profile_url = COALESCE(excluded.profile_url, faculty.profile_url),
+                    is_guest = excluded.is_guest,
+                    is_hod = excluded.is_hod,
+                    source_url = excluded.source_url,
+                    last_checked = excluded.last_checked,
+                    is_active = excluded.is_active
+            """, (
+                f_data["name"].strip(),
+                f_data.get("designation"),
+                f_data.get("qualification"),
+                f_data["department"].strip(),
+                f_data.get("email"),
+                f_data.get("photo_url"),
+                f_data.get("photo_path"),
+                f_data.get("profile_url"),
+                f_data.get("is_guest", 0),
+                f_data.get("is_hod", 0),
+                f_data.get("source_url"),
+                f_data.get("last_checked"),
+                f_data.get("is_active", 1)
+            ))
+            conn.commit()
+            return cursor.lastrowid
+
+    def upsert_faculty_batch(self, records: List[Dict[str, Any]]) -> int:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            count = 0
+            for f_data in records:
+                cursor.execute("""
+                    INSERT INTO faculty (
+                        name, designation, qualification, department, email,
+                        photo_url, photo_path, profile_url, is_guest, is_hod,
+                        source_url, last_checked, is_active
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(name, department) DO UPDATE SET
+                        designation = excluded.designation,
+                        qualification = excluded.qualification,
+                        email = excluded.email,
+                        photo_url = COALESCE(excluded.photo_url, faculty.photo_url),
+                        photo_path = COALESCE(excluded.photo_path, faculty.photo_path),
+                        profile_url = COALESCE(excluded.profile_url, faculty.profile_url),
+                        is_guest = excluded.is_guest,
+                        is_hod = excluded.is_hod,
+                        source_url = excluded.source_url,
+                        last_checked = excluded.last_checked,
+                        is_active = excluded.is_active
+                """, (
+                    f_data["name"].strip(),
+                    f_data.get("designation"),
+                    f_data.get("qualification"),
+                    f_data["department"].strip(),
+                    f_data.get("email"),
+                    f_data.get("photo_url"),
+                    f_data.get("photo_path"),
+                    f_data.get("profile_url"),
+                    f_data.get("is_guest", 0),
+                    f_data.get("is_hod", 0),
+                    f_data.get("source_url"),
+                    f_data.get("last_checked"),
+                    f_data.get("is_active", 1)
+                ))
+                count += 1
+            conn.commit()
+            return count
+
+    def get_faculty(
+        self,
+        department: Optional[str] = None,
+        search: Optional[str] = None,
+        is_guest: Optional[int] = None,
+        is_hod: Optional[int] = None,
+        is_active: Optional[int] = 1
+    ) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT * FROM faculty WHERE 1=1"
+            params = []
+            if is_active is not None:
+                query += " AND is_active = ?"
+                params.append(is_active)
+            if department:
+                query += " AND (department = ? OR department LIKE ?)"
+                params.append(department)
+                params.append(f"%{department}%")
+            if search:
+                pattern = f"%{search.strip()}%"
+                query += " AND (name LIKE ? OR designation LIKE ? OR qualification LIKE ? OR email LIKE ?)"
+                params.extend([pattern, pattern, pattern, pattern])
+            if is_guest is not None:
+                query += " AND is_guest = ?"
+                params.append(is_guest)
+            if is_hod is not None:
+                query += " AND is_hod = ?"
+                params.append(is_hod)
+            query += " ORDER BY is_hod DESC, is_guest ASC, name ASC"
+            cursor.execute(query, params)
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_faculty_by_name(self, name: str, department: Optional[str] = None) -> List[Dict[str, Any]]:
+        clean_name = name.strip()
+        if not clean_name:
+            return []
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # 1. Exact LIKE match
+            query = "SELECT * FROM faculty WHERE is_active = 1 AND LOWER(name) LIKE ?"
+            params = [f"%{clean_name.lower()}%"]
+            if department:
+                query += " AND (department = ? OR department LIKE ?)"
+                params.append(department)
+                params.append(f"%{department}%")
+            query += " ORDER BY is_hod DESC, name ASC"
+            cursor.execute(query, params)
+            results = [dict(row) for row in cursor.fetchall()]
+            if results:
+                return results
+
+            # 2. Vowel-trimmed variations (e.g. "kishore" -> "kishor", "srinivasa" -> "srinivas")
+            trimmed_candidates = []
+            name_lower = clean_name.lower()
+            if name_lower.endswith("e") and len(name_lower) >= 4:
+                trimmed_candidates.append(name_lower[:-1])
+            if name_lower.endswith("a") and len(name_lower) >= 5:
+                trimmed_candidates.append(name_lower[:-1])
+
+            for cand in trimmed_candidates:
+                c_query = "SELECT * FROM faculty WHERE is_active = 1 AND LOWER(name) LIKE ?"
+                c_params = [f"%{cand}%"]
+                if department:
+                    c_query += " AND (department = ? OR department LIKE ?)"
+                    c_params.append(department)
+                    c_params.append(f"%{department}%")
+                c_query += " ORDER BY is_hod DESC, name ASC"
+                cursor.execute(c_query, c_params)
+                c_res = [dict(row) for row in cursor.fetchall()]
+                if c_res:
+                    return c_res
+
+            # 3. Normalized match (removes dots and spaces, e.g. "C. Sreedhar" matches "Dr. C.Sreedhar")
+            norm_name = clean_name.lower().replace(".", "").replace(" ", "")
+            if len(norm_name) >= 3:
+                norm_query = """
+                    SELECT * FROM faculty 
+                    WHERE is_active = 1 
+                    AND REPLACE(REPLACE(LOWER(name), '.', ''), ' ', '') LIKE ?
+                """
+                norm_params = [f"%{norm_name}%"]
+                if department:
+                    norm_query += " AND (department = ? OR department LIKE ?)"
+                    norm_params.append(department)
+                    norm_params.append(f"%{department}%")
+                norm_query += " ORDER BY is_hod DESC, name ASC"
+                cursor.execute(norm_query, norm_params)
+                norm_results = [dict(row) for row in cursor.fetchall()]
+                if norm_results:
+                    return norm_results
+
+            # 4. Token & Fuzzy matching against faculty records
+            all_fac = self.get_faculty(department=department, is_active=1)
+            q_tokens = [t for t in re.split(r'[\s\.]+', clean_name.lower()) if len(t) >= 3 and t not in ('dr', 'sri', 'smt', 'mr', 'mrs', 'ms', 'prof')]
+            if not q_tokens:
+                return []
+
+            scored = []
+            for f in all_fac:
+                f_tokens = [t for t in re.split(r'[\s\.]+', f['name'].lower()) if len(t) >= 3 and t not in ('dr', 'sri', 'smt', 'mr', 'mrs', 'ms', 'prof')]
+                score = 0
+                for qt in q_tokens:
+                    for ft in f_tokens:
+                        if qt == ft:
+                            score += 10
+                        elif len(ft) >= 4 and len(qt) >= 4 and (ft.startswith(qt) or qt.startswith(ft)):
+                            score += 8
+                        elif difflib.SequenceMatcher(None, qt, ft).ratio() >= 0.82:
+                            score += 7
+                if score >= 7:
+                    scored.append((score, f))
+
+            if scored:
+                scored.sort(key=lambda x: (x[0], x[1].get('is_hod', 0)), reverse=True)
+                return [x[1] for x in scored]
+
+            return []
+
+    def get_hod(self, department: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM faculty 
+                WHERE is_active = 1 AND is_hod = 1 AND (department = ? OR department LIKE ?)
+                ORDER BY id ASC LIMIT 1
+            """, (department, f"%{department}%"))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def get_all_departments_with_faculty(self) -> List[str]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT DISTINCT department FROM faculty WHERE is_active = 1 ORDER BY department ASC")
+            return [row["department"] for row in cursor.fetchall()]
+
+    def mark_missing_faculty_inactive(self, department: str, active_names: List[str]) -> int:
+        if not active_names:
+            return 0
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            placeholders = ",".join("?" for _ in active_names)
+            cursor.execute(f"""
+                UPDATE faculty SET is_active = 0
+                WHERE department = ? AND name NOT IN ({placeholders})
+            """, [department] + active_names)
+            conn.commit()
+            return cursor.rowcount
+
+    # --- Answer Cache Methods ---
+
+    def get_cached_answer(self, normalized_query: str) -> Optional[Dict[str, Any]]:
+        """Retrieves cached response if present and younger than 24 hours (86400 seconds)."""
+        import time
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT response_json, created_at FROM answer_cache WHERE normalized_query = ?", (normalized_query,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            now = time.time()
+            if now - float(row["created_at"]) > 86400.0:
+                # Expired after 24h
+                cursor.execute("DELETE FROM answer_cache WHERE normalized_query = ?", (normalized_query,))
+                conn.commit()
+                return None
+            try:
+                data = json.loads(row["response_json"])
+                data["from_cache"] = True
+                return data
+            except Exception:
+                return None
+
+    def set_cached_answer(self, normalized_query: str, response: Dict[str, Any], created_at: Optional[float] = None) -> None:
+        """Stores response in cache if response_type is not NOT_FOUND or CLARIFY."""
+        resp_type = response.get("response_type")
+        if resp_type in ("NOT_FOUND", "CLARIFY"):
+            return
+        import time
+        timestamp = created_at if created_at is not None else time.time()
+        # Clean response dict of non-serializable fields if any
+        clean_resp = {k: v for k, v in response.items() if k not in ("timings",)}
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT OR REPLACE INTO answer_cache (normalized_query, response_json, created_at)
+                VALUES (?, ?, ?)
+            """, (normalized_query, json.dumps(clean_resp), timestamp))
+            conn.commit()
+
+    def clear_answer_cache(self) -> int:
+        """Clears all answers in the SQLite answer cache and returns count of rows deleted."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM answer_cache")
+            count = cursor.fetchone()[0]
+            cursor.execute("DELETE FROM answer_cache")
+            conn.commit()
+            return count
+
+    # --- Syllabus Search for Study Mode ---
+
+    def search_syllabus_subject(self, query: str) -> Optional[Dict[str, Any]]:
+        """Searches the syllabus table for a matching subject and returns its units and document_url."""
+        import re
+        q_lower = query.lower()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT DISTINCT course_title, course_code, document_url FROM syllabus WHERE course_title IS NOT NULL")
+            courses = cursor.fetchall()
+            
+            matched_course = None
+            for c in courses:
+                c_title = (c["course_title"] or "").lower()
+                c_code = (c["course_code"] or "").lower()
+                acronym_match = re.search(r'\(([^)]+)\)', c_title)
+                acronym = acronym_match.group(1).lower() if acronym_match else ""
+                
+                clean_title = re.sub(r'\(.*?\)', '', c_title).strip()
+                if (clean_title and clean_title in q_lower) or (acronym and re.search(rf'\b{re.escape(acronym)}\b', q_lower)) or (c_code and c_code in q_lower):
+                    matched_course = c
+                    break
+                    
+                c_words = set(w for w in clean_title.split() if len(w) > 3)
+                q_words = set(w for w in q_lower.split() if len(w) > 3)
+                if c_words and len(c_words.intersection(q_words)) >= 2:
+                    matched_course = c
+                    break
+                    
+            if not matched_course:
+                cursor.execute("""
+                    SELECT course_title, course_code, document_url 
+                    FROM syllabus 
+                    WHERE LOWER(unit_title) LIKE ? OR LOWER(topics) LIKE ?
+                    LIMIT 1
+                """, (f"%{query}%", f"%{query}%"))
+                matched_course = cursor.fetchone()
+
+            if matched_course:
+                cursor.execute("""
+                    SELECT unit_number, unit_title, topics, document_url
+                    FROM syllabus
+                    WHERE course_title = ?
+                    ORDER BY unit_number ASC
+                """, (matched_course["course_title"],))
+                units = [dict(row) for row in cursor.fetchall()]
+                return {
+                    "course_title": matched_course["course_title"],
+                    "course_code": matched_course["course_code"],
+                    "document_url": matched_course["document_url"] or (units[0]["document_url"] if units else None),
+                    "units": [u["unit_title"] for u in units if u.get("unit_title")]
+                }
+            return None
 
 
 if __name__ == "__main__":

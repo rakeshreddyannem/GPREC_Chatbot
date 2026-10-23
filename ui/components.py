@@ -2,6 +2,7 @@ import streamlit as st
 import base64
 import os
 import json
+import re
 from datetime import datetime
 
 def load_css(file_path="ui/style.css"):
@@ -36,10 +37,33 @@ def render_header():
     st.markdown(f"""
         <div class="main-header">
             {img_html}
-            <div>
+            <div class="header-text">
                 <h1>AI Student Assistant</h1>
-                <p>G. Pulla Reddy Engineering College</p>
-                <div class="badge">Answers from official GPREC sources only</div>
+                <p>G. Pulla Reddy Engineering College (Autonomous)</p>
+                <div class="badge-amber">Answers from official GPREC sources only</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+def render_loading_skeleton():
+    """Render a modern skeleton shimmer loading card with a smooth spinner."""
+    st.markdown("""
+        <div class="skeleton-card">
+            <div class="skeleton-header">
+                <div class="skeleton-avatar skeleton-shimmer"></div>
+                <div class="skeleton-header-text">
+                    <div class="skeleton-line skeleton-shimmer" style="width: 140px; height: 14px;"></div>
+                    <div class="skeleton-line skeleton-shimmer" style="width: 85px; height: 10px; margin-top: 4px;"></div>
+                </div>
+            </div>
+            <div class="skeleton-body">
+                <div class="skeleton-line skeleton-shimmer" style="width: 95%;"></div>
+                <div class="skeleton-line skeleton-shimmer" style="width: 88%;"></div>
+                <div class="skeleton-line skeleton-shimmer" style="width: 65%;"></div>
+            </div>
+            <div class="skeleton-footer">
+                <span class="skeleton-spinner-ring"></span>
+                <span class="skeleton-footer-text">Consulting official GPREC knowledge base & drafting response...</span>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -209,44 +233,56 @@ def render_notices_page(db):
         "event": "#0891b2"
     }
 
-    for notice in notices:
+    for idx, notice in enumerate(notices):
         title = notice.get("title") or "College Notice"
         ntype = notice.get("notice_type") or "circular"
         prog = notice.get("program") or ""
         sem = notice.get("semester") or ""
         reg = notice.get("scheme_regulation") or ""
-        date_str = format_date(notice.get("published_date") or "")
-        att_urls = notice.get("attachment_urls") or ""
-        urls_list = [u.strip() for u in att_urls.split(",") if u.strip()] if att_urls else []
-        primary_link = urls_list[0] if urls_list else (notice.get("source_page") or "http://examcell.gprec.ac.in/")
-        raw_text = notice.get("raw_text") or ""
+        dept = notice.get("department") or "General"
+        deadline = notice.get("deadline_date")
         
+        pub_raw = notice.get("published_date")
+        if pub_raw:
+            date_display = format_date(pub_raw)
+        else:
+            date_display = "Date not found"
+            
+        doc_url = notice.get("document_url") or notice.get("attachment_urls") or notice.get("source_page") or "https://www.gprec.ac.in"
+        # If multiple comma-separated URLs in attachment_urls, take the first valid one
+        if doc_url and "," in doc_url:
+            doc_url = doc_url.split(",")[0].strip()
+            
+        raw_text = notice.get("raw_text") or ""
         badge_color = type_colors.get(ntype.lower(), "#4b5563")
 
         with st.container():
-            st.markdown(f"#### [{title}]({primary_link})")
+            st.markdown(f"#### {title}")
             
-            # Tags row
-            tags_html = f"<span style='background-color:{badge_color}; color:white; padding:3px 8px; border-radius:12px; font-size:0.78rem; font-weight:600;'>{ntype.title()}</span>"
+            # Tags row: Department tag, Notice type tag, Program/Semester tags, Date, Deadline
+            tags_html = f"<span style='background-color:#EEF2FF; color:#4338CA; border:1px solid #C7D2FE; padding:3px 8px; border-radius:12px; font-size:0.78rem; font-weight:600;'>🏛️ {dept}</span> "
+            tags_html += f"<span style='background-color:{badge_color}; color:white; padding:3px 8px; border-radius:12px; font-size:0.78rem; font-weight:600;'>{ntype.title()}</span>"
             if prog:
                 tags_html += f" <span style='background-color:#E0E7FF; color:#3730A3; padding:3px 8px; border-radius:12px; font-size:0.78rem; font-weight:500;'>{prog}</span>"
             if sem:
                 tags_html += f" <span style='background-color:#F3F4F6; color:#1F2937; padding:3px 8px; border-radius:12px; font-size:0.78rem;'>{sem}</span>"
             if reg:
                 tags_html += f" <span style='background-color:#FEF3C7; color:#92400E; padding:3px 8px; border-radius:12px; font-size:0.78rem;'>{reg}</span>"
-            if date_str:
-                tags_html += f" <span style='color:#6B7280; font-size:0.8rem; margin-left:8px;'>Published: {date_str}</span>"
+            
+            # Date tag - shows formatted date or 'Date not found'
+            tags_html += f" <span style='color:#4B5563; font-size:0.8rem; margin-left:8px; font-weight:500;'>📅 {date_display}</span>"
+            
+            if deadline:
+                tags_html += f" <span style='background-color:#FEE2E2; color:#991B1B; border:1px solid #FCA5A5; padding:3px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; margin-left:8px;'>⏳ Deadline: {deadline}</span>"
             
             st.markdown(tags_html, unsafe_allow_html=True)
             
-            if raw_text and raw_text != title:
-                st.caption(raw_text[:200] + ('...' if len(raw_text) > 200 else ''))
+            if raw_text and raw_text.strip() != title.strip():
+                st.caption(raw_text[:250] + ('...' if len(raw_text) > 250 else ''))
                 
-            if urls_list:
-                cols = st.columns(min(len(urls_list), 3))
-                for idx, u in enumerate(urls_list[:3]):
-                    with cols[idx]:
-                        st.markdown(f"[📄 Download Document PDF]({u})")
+            # 'Open document' button using st.link_button. Never show raw URLs as text.
+            if doc_url:
+                st.link_button("📄 Open document", doc_url, key=f"notice_btn_{notice.get('notice_id', idx)}")
                         
             st.divider()
 
@@ -453,11 +489,17 @@ def render_admin_page(db):
                 attr = st.text_input("Attribute", placeholder="e.g. name / timings / fee_amount")
             val = st.text_area("Ground Truth Value", placeholder="e.g. Dr. B. Sreenivasa Reddy, M.Tech., Ph.D.")
             src = st.text_input("Official Source URL", placeholder="https://gprec.ac.in/...")
+            admin_name = st.text_input("Verified By (Admin Name)*", placeholder="Enter your full name (cannot be 'admin')")
             submitted = st.form_submit_button("Save Verified Fact", type="primary")
-            if submitted and entity and val:
-                db.upsert_verified_fact(cat, entity, attr, val, src)
-                st.success(f"Saved verified fact for {entity} ({attr})!")
-                st.rerun()
+            if submitted:
+                if not entity or not val:
+                    st.error("Entity and Ground Truth Value are required.")
+                elif not admin_name or admin_name.strip().lower() == "admin":
+                    st.error("Please enter a valid admin name. It cannot be blank or 'admin'.")
+                else:
+                    db.upsert_verified_fact(cat, entity, attr, val, src, verified_by=admin_name.strip())
+                    st.success(f"Saved verified fact for {entity} ({attr}) by {admin_name.strip()}!")
+                    st.rerun()
 
     st.divider()
 
@@ -518,5 +560,269 @@ def render_admin_page(db):
                     <span style="font-size: 0.75rem; color: #6b7280;">({data['pages_count']} pages, {data['total_content_bytes']} bytes)</span>
                 </div>
             """, unsafe_allow_html=True)
+
+
+def get_canonical_designation(desig_raw: str) -> str:
+    """Map raw designation to clean canonical academic title."""
+    if not desig_raw:
+        return "Faculty Member"
+    d = desig_raw.lower().replace("\xa0", " ").strip()
+    if "principal" in d:
+        return "Principal & Professor"
+    if "dean" in d:
+        return "Dean & Professor" if "prof" in d else "Dean"
+    if "associate head" in d or "assoc. head" in d:
+        return "Associate Head of Dept."
+    if "associate professor" in d or "assoc. prof" in d or "assoc prof" in d:
+        return "Associate Professor"
+    if "assistant professor" in d or "asst. prof" in d or "asst prof" in d:
+        return "Assistant Professor"
+    if "professor & head" in d or "professor and head" in d:
+        return "Professor & Head"
+    if "professor" in d:
+        return "Professor"
+    if "adjunct" in d:
+        return "Adjunct Faculty"
+    if "guest" in d:
+        return "Guest Faculty"
+    if "lecturer" in d:
+        return "Lecturer"
+    return desig_raw.strip()
+
+
+def check_is_hod(faculty: dict) -> bool:
+    """Return True if faculty record indicates Head of the Department."""
+    if faculty.get("is_hod") == 1:
+        return True
+    desig = (faculty.get("designation") or "").lower().replace("\xa0", " ")
+    if "assoc" in desig or "associate" in desig:
+        return False
+    return bool(re.search(r'\b(hod|head of the department|head of department|head)\b', desig))
+
+
+def get_initials(name: str) -> str:
+    """Extract clean 2-letter initials from name, stripping honorary prefixes."""
+    cleaned = re.sub(r'^(dr[\s\.]+|sri[\s\.]+|smt[\s\.]+|mr[\s\.]+|mrs[\s\.]+|ms[\s\.]+|prof[\s\.]+)', '', name.strip(), flags=re.IGNORECASE)
+    parts = [p for p in re.split(r'[\s\.]+', cleaned) if p]
+    if len(parts) >= 2:
+        return (parts[0][0] + parts[-1][0]).upper()
+    elif len(parts) == 1 and parts[0]:
+        return parts[0][:2].upper()
+    return "GP"
+
+
+def render_chat_faculty_cards(faculty_records: list, key_prefix: str = "chat_fac"):
+    """Render custom modern HTML/CSS photo cards in chat message for faculty queries."""
+    if not faculty_records:
+        return
+        
+    for idx, f in enumerate(faculty_records[:3]):
+        photo_path = f.get("photo_path")
+        has_photo = photo_path and os.path.exists(photo_path) and os.path.getsize(photo_path) > 0
+        name = f.get("name", "Faculty Member")
+        raw_desig = f.get("designation") or "Not listed"
+        canonical_desig = get_canonical_designation(raw_desig)
+        dept = f.get("department") or "Not listed"
+        qual = f.get("qualification") or "Not listed"
+        email = f.get("email")
+        profile_url = f.get("profile_url")
+        is_hod = check_is_hod(f)
+
+        # Photo media HTML
+        if has_photo:
+            img_b64 = get_base64_of_bin_file(photo_path)
+            media_html = f'<img src="data:image/jpeg;base64,{img_b64}" alt="{name}" class="faculty-photo" />'
+        else:
+            initials = get_initials(name)
+            media_html = (
+                f'<div class="faculty-photo-placeholder">'
+                f'<span class="faculty-avatar-icon">👤</span>'
+                f'<span class="faculty-avatar-initials">{initials}</span>'
+                f'</div>'
+            )
+
+        # Badges HTML
+        hod_badge = '<span class="fac-badge-hod">⭐ Head of Department</span>' if is_hod else ''
+        badges_html = f'<span class="fac-badge-desig">{canonical_desig}</span> {hod_badge}'.strip()
+
+        # Email HTML with copy-friendly button
+        if email:
+            email_html = (
+                f'<div class="faculty-detail-item">'
+                f'<span class="fac-icon">✉️</span>'
+                f'<span class="fac-label">Email:</span>'
+                f'<span class="fac-val">'
+                f'<a href="mailto:{email}" class="fac-email-link" title="Click to compose email">{email}</a>'
+                f'<button type="button" class="fac-copy-btn" '
+                f'onclick="navigator.clipboard.writeText(\'{email}\'); this.innerText=\'✓ Copied\'; this.classList.add(\'copied\'); setTimeout(() => {{ this.innerText=\'📋 Copy\'; this.classList.remove(\'copied\'); }}, 1500);" '
+                f'title="Copy email to clipboard">📋 Copy</button>'
+                f'</span>'
+                f'</div>'
+            )
+        else:
+            email_html = (
+                f'<div class="faculty-detail-item">'
+                f'<span class="fac-icon">✉️</span>'
+                f'<span class="fac-label">Email:</span>'
+                f'<span class="fac-val fac-val-muted">Not officially listed</span>'
+                f'</div>'
+            )
+
+        # Profile URL action button
+        profile_action_html = ""
+        if profile_url:
+            profile_action_html = (
+                f'<div class="faculty-card-actions">'
+                f'<a href="{profile_url}" target="_blank" rel="noopener noreferrer" class="fac-profile-link">'
+                f'📄 View Official Profile PDF ↗'
+                f'</a>'
+                f'</div>'
+            )
+
+        card_html = (
+            f'<div class="faculty-card">'
+            f'<div class="faculty-card-media">{media_html}</div>'
+            f'<div class="faculty-card-content">'
+            f'<div class="faculty-card-header">'
+            f'<h3 class="faculty-name">{name}</h3>'
+            f'<div class="faculty-badges">{badges_html}</div>'
+            f'</div>'
+            f'<div class="faculty-details-grid">'
+            f'<div class="faculty-detail-item">'
+            f'<span class="fac-icon">🏛️</span>'
+            f'<span class="fac-label">Department:</span>'
+            f'<span class="fac-val">{dept}</span>'
+            f'</div>'
+            f'<div class="faculty-detail-item">'
+            f'<span class="fac-icon">🎓</span>'
+            f'<span class="fac-label">Qualification:</span>'
+            f'<span class="fac-val">{qual}</span>'
+            f'</div>'
+            f'{email_html}'
+            f'</div>'
+            f'{profile_action_html}'
+            f'</div>'
+            f'</div>'
+        )
+        st.markdown(card_html, unsafe_allow_html=True)
+
+
+def render_faculty_directory_page(db):
+    """Render full-featured Faculty Directory page with filters and 3-column card grid."""
+    st.title("👨‍🏫 GPREC Faculty Directory")
+    st.markdown("Search and browse official faculty profiles, qualifications, and department directories.")
+
+    # 1. Department List
+    all_depts = db.get_all_departments_with_faculty()
+    dept_options = ["All Departments"] + all_depts
+
+    # 2. Controls
+    c_dept, c_search, c_filter = st.columns([1.5, 1.5, 1])
+    with c_dept:
+        selected_dept = st.selectbox("Department", dept_options, index=0)
+    with c_search:
+        search_query = st.text_input("Search by Name or Keyword", placeholder="e.g. Kishor, Praveen, Ph.D.")
+    with c_filter:
+        fac_type = st.selectbox("Type", ["All Faculty", "Regular Only", "Guest / Adjunct", "HODs Only"])
+
+    # Map filters
+    dept_arg = None if selected_dept == "All Departments" else selected_dept
+    guest_arg = None
+    hod_arg = None
+    if fac_type == "Regular Only":
+        guest_arg = 0
+    elif fac_type == "Guest / Adjunct":
+        guest_arg = 1
+    elif fac_type == "HODs Only":
+        hod_arg = 1
+
+    # Fetch faculty from database
+    faculty_list = db.get_faculty(
+        department=dept_arg,
+        search=search_query if search_query.strip() else None,
+        is_guest=guest_arg,
+        is_hod=hod_arg,
+        is_active=1
+    )
+
+    # Status / Metrics Header
+    last_updated = "Official Website"
+    if faculty_list and faculty_list[0].get("last_checked"):
+        last_updated = faculty_list[0]["last_checked"].split()[0]
+
+    st.markdown(f"""
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 18px; margin:15px 0 25px 0; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <span style="font-size:1.1rem; font-weight:600; color:#1e293b;">Total Faculty Found: </span>
+                <span style="font-size:1.2rem; font-weight:700; color:#2563eb;">{len(faculty_list)}</span>
+            </div>
+            <div style="font-size:0.85rem; color:#64748b;">
+                📅 <b>Last Updated:</b> {last_updated}
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    if not faculty_list:
+        st.info("No faculty members found matching your search and filter criteria.")
+        return
+
+    # 3. Responsive 3-Column Grid
+    cols_per_row = 3
+    for i in range(0, len(faculty_list), cols_per_row):
+        row_members = faculty_list[i:i + cols_per_row]
+        cols = st.columns(cols_per_row)
+
+        for j, f in enumerate(row_members):
+            with cols[j]:
+                photo_path = f.get("photo_path")
+                has_photo = photo_path and os.path.exists(photo_path) and os.path.getsize(photo_path) > 0
+                is_hod = check_is_hod(f)
+                name = f.get("name", "Faculty Member")
+                raw_desig = f.get("designation") or "Not listed"
+                canonical_desig = get_canonical_designation(raw_desig)
+                dept = f.get("department") or "Not listed"
+                qual = f.get("qualification") or "Not listed"
+                email = f.get("email")
+                profile_url = f.get("profile_url")
+
+                with st.container(border=True):
+                    # Top Photo
+                    if has_photo:
+                        st.image(photo_path, use_container_width=True)
+                    else:
+                        initials = get_initials(name)
+                        st.markdown(f"""
+                            <div style="height:170px; background:#f1f5f9; border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:3rem; color:#94a3b8; margin-bottom:10px;">
+                                <span>👤</span>
+                                <span style="font-size:0.82rem; font-weight:700; color:#64748b; margin-top:4px;">{initials}</span>
+                            </div>
+                        """, unsafe_allow_html=True)
+
+                    # Info
+                    hod_badge = " <span class='fac-badge-hod'>HOD</span>" if is_hod else ""
+
+                    st.markdown(f"<div style='font-size:1.05rem; font-weight:700; line-height:1.3; min-height:45px; color:#0f172a;'>{name}{hod_badge}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='margin:4px 0;'><span class='fac-badge-desig'>{canonical_desig}</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size:0.82rem; color:#64748b; margin-bottom:4px;'>🏛️ {dept}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size:0.82rem; margin-bottom:6px; color:#334155;'>🎓 <b>Qual:</b> {qual}</div>", unsafe_allow_html=True)
+
+                    if email:
+                        st.markdown(f"""
+                            <div style='font-size:0.8rem; margin-bottom:10px; display:flex; align-items:center; gap:4px;'>
+                                <span>📧</span> 
+                                <a href='mailto:{email}' style='color:#2563eb; text-decoration:none;'>{email}</a>
+                                <button type='button' class='fac-copy-btn' 
+                                    onclick="navigator.clipboard.writeText('{email}'); this.innerText='✓'; setTimeout(() => this.innerText='📋', 1500);" 
+                                    title='Copy email'>📋</button>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown("<div style='font-size:0.8rem; color:#94a3b8; margin-bottom:10px;'>📧 <i>Email not listed</i></div>", unsafe_allow_html=True)
+
+                    if profile_url:
+                        st.link_button("📄 View Profile", profile_url, key=f"grid_btn_{f['id']}_{i}_{j}", use_container_width=True)
+                    else:
+                        st.button("No Profile PDF", key=f"grid_dis_{f['id']}_{i}_{j}", disabled=True, use_container_width=True)
+
 
 

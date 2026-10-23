@@ -21,9 +21,10 @@ DB_PATH = BASE_DIR / os.getenv("DB_PATH", "gprec_knowledge.db")
 TARGET_URL = "https://gprec.ac.in"
 ALLOWED_DOMAINS = ["gprec.ac.in", "www.gprec.ac.in"]
 MAX_PAGES = 300
-CRAWL_DELAY = 0.1  # Rate limiting delay in seconds
+CRAWL_DELAY = 1.0  # Default crawl delay in seconds (honours robots.txt if present)
 REQUEST_TIMEOUT = 15
-USER_AGENT = "GPREC-AI-Student-Assistant/1.0 (+https://gprec.ac.in)"
+USER_AGENT = "GPREC-Student-Project-Bot (college project)"
+SEED_DEMO_DATA = False  # If False, database will not seed demo facts, entities, notices, or acronyms
 
 # Target sections to prioritize during crawling
 SEED_URLS = [
@@ -75,7 +76,8 @@ UPDATE_INTERVALS = {
 # LLM Config
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openrouter")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemma-2-9b-it:free")
+LLM_MODEL = os.getenv("LLM_MODEL") or os.getenv("OPENROUTER_MODEL", "google/gemma-2-9b-it:free")
+OPENROUTER_MODEL = LLM_MODEL
 
 # Important pages coverage configuration (Pages that must be indexed)
 IMPORTANT_PAGES = [

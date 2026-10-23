@@ -99,10 +99,13 @@ def test_notice_parser_classification():
     )
     assert f_notice["notice_type"] == "fee notification"
 
-def test_database_notices_operations(tmp_path):
+def test_database_notices_operations(tmp_path, monkeypatch):
     """Verify database notices schema, seeding, filtering, and retrieval."""
+    import config
+    monkeypatch.setattr(config, "SEED_DEMO_DATA", True)
     test_db_path = tmp_path / "test_gprec.db"
     db = DatabaseManager(db_path=test_db_path)
+    db._seed_default_notices()
     
     # 1. Check default seeded notices
     notices = db.get_notices()
@@ -133,9 +136,13 @@ def test_exam_timetable_ambiguity_step3():
     assert "B.Tech I Year" in amb["options"]
     assert any("IV Sem" in opt or "IV Year" in opt for opt in amb["options"])
 
-def test_fee_structure_verified_facts():
+def test_fee_structure_verified_facts(tmp_path, monkeypatch):
     """Verify that verified_facts contains APHERMC tuition fee structure with academic year."""
-    db = DatabaseManager()
+    import config
+    monkeypatch.setattr(config, "SEED_DEMO_DATA", True)
+    test_db_path = tmp_path / "test_gprec.db"
+    db = DatabaseManager(db_path=test_db_path)
+    db._seed_verified_facts()
     facts = db.get_matching_verified_facts("what is fee structure of EEE department")
     assert len(facts) >= 1
     

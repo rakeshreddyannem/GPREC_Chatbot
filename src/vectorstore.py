@@ -46,7 +46,48 @@ class VectorStore:
             pickle.dump(self.metadata, f)
         self._build_bm25()
 
-    def add_chunks(self, chunks: List[Dict[str, Any]], embeddings: np.ndarray):
+    def remove_by_urls(self, urls: Any, save: bool = True) -> int:
+        """Removes chunks matching the given URLs by reconstructing the remaining vectors,
+        creating a new IndexFlatL2 index, filtering metadata, and rebuilding BM25.
+        Keeps vectors and metadata strictly aligned 1:1.
+        Returns the number of chunks removed.
+        """
+        if not urls or not self.metadata or self.index is None or self.index.ntotal == 0:
+            return 0
+
+        target_urls = set(urls)
+        keep_indices = []
+        new_metadata = []
+
+        for idx, meta in enumerate(self.metadata):
+            chunk_url = meta.get("source_url") or meta.get("document_url")
+            if chunk_url not in target_urls:
+                keep_indices.append(idx)
+                new_metadata.append(meta)
+
+        removed_count = len(self.metadata) - len(new_metadata)
+        if removed_count == 0:
+            return 0
+
+        if len(keep_indices) > 0:
+            all_vectors = self.index.reconstruct_n(0, self.index.ntotal)
+            keep_vectors = all_vectors[keep_indices]
+            new_index = faiss.IndexFlatL2(self.dimension)
+            new_index.add(keep_vectors)
+            self.index = new_index
+            self.metadata = new_metadata
+        else:
+            self.index = faiss.IndexFlatL2(self.dimension)
+            self.metadata = []
+
+        self._build_bm25()
+
+        if save:
+            self.save()
+
+        return removed_count
+
+    def add_chunks(self, chunks: List[Dict[str, Any]], embeddings: np.ndarray, save: bool = True):
         if len(chunks) == 0:
             return
             
@@ -56,7 +97,8 @@ class VectorStore:
         # Add metadata
         self.metadata.extend(chunks)
         
-        self.save()
+        if save:
+            self.save()
 
     def search(self, query_embedding: np.ndarray, query_text: str = "", top_k: int = config.TOP_K) -> List[Dict[str, Any]]:
         if self.index.ntotal == 0:

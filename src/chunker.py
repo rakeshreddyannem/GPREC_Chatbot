@@ -39,6 +39,11 @@ class DocumentChunker:
         base_title = page_data.get("title", "")
         source_url = page_data.get("source_url", "")
 
+        page_hash = page_data.get("content_hash")
+        if not page_hash and raw_text:
+            import hashlib
+            page_hash = hashlib.sha256(raw_text.encode("utf-8")).hexdigest()
+
         for idx, c_text in enumerate(chunks_text):
             # 2. Derive section-level title
             section_title = SectionTitleExtractor.derive_title(base_title, c_text, source_url)
@@ -51,7 +56,7 @@ class DocumentChunker:
                 "department": page_data.get("department", ""),
                 "published_date": page_data.get("published_date", ""),
                 "last_checked": page_data.get("last_checked", ""),
-                "content_hash": page_data.get("content_hash", ""),
+                "content_hash": page_hash or "",
                 "version": page_data.get("version", 1),
                 "is_current": page_data.get("is_current", 1),
                 "content": c_text
@@ -64,6 +69,12 @@ class DocumentChunker:
     def chunk_pdf(self, pdf_metadata: Dict[str, Any], pages_text: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Splits PDF pages into chunks and attaches metadata."""
         chunk_docs = []
+        pdf_hash = pdf_metadata.get("content_hash")
+        if not pdf_hash:
+            import hashlib
+            combined_text = "".join(p.get("content", "") for p in pages_text)
+            pdf_hash = hashlib.sha256(combined_text.encode("utf-8")).hexdigest()
+
         for p in pages_text:
             page_num = p["page_num"]
             content = p["content"]
@@ -82,7 +93,7 @@ class DocumentChunker:
                     "department": pdf_metadata.get("department", "General"),
                     "published_date": pdf_metadata.get("published_date", ""),
                     "last_checked": pdf_metadata.get("last_checked", ""),
-                    "content_hash": pdf_metadata.get("content_hash", ""),
+                    "content_hash": pdf_hash or "",
                     "version": pdf_metadata.get("version", 1),
                     "is_current": pdf_metadata.get("is_current", 1),
                     "content": c_text

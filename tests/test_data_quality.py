@@ -55,24 +55,48 @@ def test_chunk_deduplication():
     assert len(deduped) == 2  # Only one placement chunk and one library chunk kept
     assert any("library" in c["content"] for c in deduped)
 
-def test_verified_facts_leadership_principal():
-    db = DatabaseManager()
+def test_verified_facts_leadership_principal(tmp_path, monkeypatch):
+    import config
+    monkeypatch.setattr(config, "SEED_DEMO_DATA", True)
+    test_db = tmp_path / "test_facts.db"
+    db = DatabaseManager(db_path=test_db)
+    db._seed_verified_facts()
     facts = db.get_matching_verified_facts("who is the principal of this college")
     assert len(facts) >= 1
     assert any("Sreenivasa Reddy" in f["value"] for f in facts)
 
-def test_coverage_auditor():
-    db = DatabaseManager()
+def test_coverage_auditor(tmp_path):
+    test_db = tmp_path / "test_coverage.db"
+    db = DatabaseManager(db_path=test_db)
+    # Populate test fixture pages with sufficient content (>= 200 bytes) for audited domains
+    db.upsert_page({
+        "source_url": "https://gprec.ac.in/departments/eee",
+        "title": "EEE department faculty",
+        "department": "EEE",
+        "clean_text": "Electrical and Electronics Engineering faculty members and laboratory infrastructure. " * 10
+    })
+    db.upsert_page({
+        "source_url": "https://gprec.ac.in/placements",
+        "title": "Placement statistics / recruiters",
+        "department": "T&P",
+        "clean_text": "Placement training and recruitment statistics for top companies visiting GPREC college. " * 10
+    })
     audit = CoverageAuditor.audit_coverage(db)
     assert "EEE department faculty" in audit
     assert "Library resources & timings" in audit
     assert "Placement statistics / recruiters" in audit
-    # At least EEE, Library, and Placements are present in the knowledge base
+    # Domains with seeded test pages are PRESENT
     assert audit["EEE department faculty"]["status"] == "PRESENT"
     assert audit["Placement statistics / recruiters"]["status"] == "PRESENT"
+    # Unpopulated domain is correctly audited as MISSING
+    assert audit["Library resources & timings"]["status"] == "MISSING"
 
-def test_entity_directory():
-    db = DatabaseManager()
+def test_entity_directory(tmp_path, monkeypatch):
+    import config
+    monkeypatch.setattr(config, "SEED_DEMO_DATA", True)
+    test_db = tmp_path / "test_entities.db"
+    db = DatabaseManager(db_path=test_db)
+    db._seed_entity_directory()
     principal_entities = db.search_entity_directory("who is the principal of this college")
     assert len(principal_entities) >= 1
     assert "Sreenivasa Reddy" in principal_entities[0]["name"]
