@@ -1,0 +1,33 @@
+LINEAR ALGEBRA & CALCULUS (LAC)
+[
+I Semester : Common to all Branches
+Scheme : 2023
+Course Code Category Hours/Week Credits Maximum Marks
+BS101 Basic Science Course L T P C Continuous Internal Assessment End Exam Total
+3 0 0 3 30 70 100
+Course Outcomes : At the end of the course the student will be able to
+CO1: Understand the concepts of Matrix operations and solving system of linear equations
+CO2: Determine Eigen values and Eigen vectors
+CO3: Apply mean value theorems to real functions
+CO4: Evaluate functions of several variables
+CO5: Compute multiple integrals
+UNIT – I
+Matrices
+Rank of a matrix by echelon form, normal form. Cauchy-Binet formulae (without proof). Inverse of Non- singular matrices by Gauss-Jordan method, System of linear equations: Solving system of Homogeneous and Non-Homogeneous equations by Gauss elimination method, Jacobi and Gauss Seidel Iteration Methods.
+UNIT – II
+Eigenvalues, Eigenvectors and Orthogonal Transformation
+Eigenvalues, Eigenvectors and their properties, Diagonalization of a matrix, Cayley-Hamilton Theorem (without proof), finding inverse and power of a matrix by Cayley-Hamilton Theorem, Quadratic forms and Nature of the Quadratic Forms, Reduction of Quadratic form to canonical forms by Orthogonal Transformation.
+UNIT – III
+Calculus
+Mean Value Theorems: Rolle’s Theorem, Lagrange’s mean value theorem with their geometrical interpretation, Cauchy’s mean value theorem, Taylor’s and Maclaurin’s theorems with remainders (without proof), Problems and applications on the above theorems.
+UNIT – IV
+Partial Differentiation (Multi variable calculus)
+Functions of several variables: Continuity and Differentiability, Partial derivatives, total derivatives, chain rule, Directional derivative, Taylor’s and Maclaurin’s series expansion of functions of two variables. Jacobians, Functional dependence, extreme values of functions of two variables, methods of Lagrange’s multipliers.
+UNIT – V
+Multiple Integrals (Multi variable Calculus)
+Double integrals, triple integrals, change of order of integration, change of variables to polar, cylindrical and spherical coordinates. Finding areas (by double integrals) and volumes (by double integrals and triple integrals).
+Text Books
+1. B. S. Grewal, Higher Engineering Mathematics, Khanna Publishers, Delhi
+2. Erwin Kreyszig, Advanced Engineering Mathematics, John Wiley & Sons, New York
+Reference Books
+1. B.V.Ramana, Higher Engineering Mathematics, Mc Graw Hill publishers.

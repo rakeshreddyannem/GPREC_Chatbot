@@ -48,6 +48,13 @@
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 22px;
+
+  /* Spacing Tokens */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
 }
 
 /* Base resets & typography */
@@ -79,13 +86,19 @@ html, body, [class*="css"] {
   filter: none !important;
 }
 
-/* Header Container Styling */
+/* Header Container Styling - Sticky on desktop and mobile with safe spacing */
 .main-header {
+  position: sticky;
+  top: 0;
+  z-index: 99;
+  background-color: rgba(248, 250, 252, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   gap: 1.25rem;
-  padding: 1.25rem 0 1.5rem 0;
-  margin-bottom: 1.75rem;
+  padding: 0.85rem 0 1rem 0;
+  margin-bottom: 1.5rem;
   border-bottom: 1px solid var(--slate-200);
 }
 
@@ -153,21 +166,21 @@ html, body, [class*="css"] {
   margin-bottom: 0.75rem !important;
 }
 
-/* Pill Tabs Radio Buttons Container */
-[data-testid="stRadio"] div[role="radiogroup"] {
+/* Pill Tabs Radio Buttons Container (Sidebar Navigation only) */
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] {
   display: flex !important;
   flex-direction: column !important;
   gap: 5px !important;
   width: 100% !important;
 }
 
-/* Hide default circular radio button input */
-[data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child {
+/* Hide default circular radio button input in sidebar navigation */
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child {
   display: none !important;
 }
 
 /* Style each navigation option as a modern pill tab */
-[data-testid="stRadio"] div[role="radiogroup"] > label {
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label {
   width: 100% !important;
   padding: 0.65rem 0.95rem !important;
   border-radius: 10px !important;
@@ -185,7 +198,7 @@ html, body, [class*="css"] {
 }
 
 /* Hover state for pill tabs */
-[data-testid="stRadio"] div[role="radiogroup"] > label:hover {
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:hover {
   background-color: var(--slate-100) !important;
   color: var(--slate-900) !important;
   border-color: var(--slate-200) !important;
@@ -193,8 +206,8 @@ html, body, [class*="css"] {
 }
 
 /* Active/Selected pill tab */
-[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked),
-[data-testid="stRadio"] div[role="radiogroup"] > label[aria-checked="true"] {
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked),
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label[aria-checked="true"] {
   background-color: #ffffff !important;
   color: var(--slate-900) !important;
   font-weight: 600 !important;
@@ -204,8 +217,8 @@ html, body, [class*="css"] {
   transform: translateX(3px) !important;
 }
 
-[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) p,
-[data-testid="stRadio"] div[role="radiogroup"] > label[aria-checked="true"] p {
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) p,
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label[aria-checked="true"] p {
   color: var(--slate-900) !important;
   font-weight: 600 !important;
 }
@@ -1014,3 +1027,307 @@ small {
     padding: 1rem !important;
   }
 }
+
+/* ==========================================================================
+   Subject Assistance Styles (Slate-Amber theme, phone-width responsive)
+   ========================================================================== */
+
+/* Compact Subject Header Card */
+.subject-header-card {
+  background: white;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  padding: 1.15rem 1.35rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.subject-header-card:hover {
+  border-color: var(--slate-300);
+  box-shadow: var(--shadow-card);
+}
+
+.subject-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.subject-header-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--slate-900);
+  margin: 0;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  flex: 1 1 auto;
+  min-width: 220px;
+}
+
+.subject-header-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.badge-code {
+  background-color: var(--amber-50);
+  color: var(--amber-900);
+  border: 1px solid var(--amber-300);
+  border-radius: var(--radius-sm);
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.badge-credit {
+  background-color: var(--slate-100);
+  color: var(--slate-700);
+  border: 1px solid var(--slate-300);
+  border-radius: var(--radius-sm);
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.badge-ltp {
+  background-color: var(--blue-50);
+  color: var(--blue-700);
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-sm);
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.badge-running {
+  background-color: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  border-radius: var(--radius-sm);
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.subject-header-sub {
+  font-size: 0.86rem;
+  color: var(--slate-500);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.subject-header-sub span b {
+  color: var(--slate-800);
+}
+
+/* Practice Questions styling */
+.practice-disclaimer-badge {
+  display: inline-block;
+  background-color: var(--amber-50);
+  color: var(--amber-800);
+  border: 1px solid var(--amber-200);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-bottom: 0.85rem;
+}
+
+.mcq-container {
+  background: white;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.15rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-subtle);
+}
+
+.mcq-question-header {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--slate-900);
+  margin-bottom: 0.75rem;
+}
+
+.mcq-feedback-correct {
+  background-color: var(--emerald-50);
+  color: var(--emerald-700);
+  border: 1px solid #a7f3d0;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.mcq-feedback-incorrect {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+/* Verification footer note */
+.verification-footnote {
+  font-size: 0.75rem;
+  color: var(--slate-500);
+  border-top: 1px solid var(--slate-200);
+  padding-top: 0.5rem;
+  margin-top: 1rem;
+  font-style: italic;
+}
+
+/* Phone width friendliness: Smooth tab scroll with no overflow */
+[data-baseweb="tab-list"] {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding-bottom: 4px;
+  gap: 0.5rem !important;
+  border-bottom: 1px solid var(--slate-200) !important;
+}
+
+[data-baseweb="tab-list"]::-webkit-scrollbar {
+  height: 4px;
+}
+
+[data-baseweb="tab-list"]::-webkit-scrollbar-thumb {
+  background: var(--slate-300);
+  border-radius: 4px;
+}
+
+[data-baseweb="tab"] {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  font-size: 0.88rem !important;
+  padding: 0.5rem 0.85rem !important;
+  color: var(--slate-600) !important;
+  transition: all 0.2s ease !important;
+}
+
+[data-baseweb="tab"]:hover {
+  color: var(--amber-700) !important;
+}
+
+[data-baseweb="tab"][aria-selected="true"] {
+  color: var(--amber-700) !important;
+  font-weight: 600 !important;
+  border-bottom: 2.5px solid var(--amber-600) !important;
+}
+
+/* Ensure example doubt buttons & multiline buttons wrap text cleanly */
+.stButton > button {
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+.stButton > button p,
+.stButton > button div {
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+/* Copy Button in Answer Footer */
+.btn-copy-ans {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  color: var(--slate-700);
+  border: 1px solid var(--slate-300);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-shadow: var(--shadow-subtle);
+}
+
+.btn-copy-ans:hover {
+  background-color: var(--slate-100);
+  border-color: var(--slate-400);
+  color: var(--slate-900);
+}
+
+.btn-copy-ans:active {
+  transform: scale(0.98);
+}
+
+@media (max-width: 640px) {
+  .subject-header-card {
+    padding: 0.85rem;
+  }
+  .subject-header-title {
+    font-size: 1rem;
+  }
+}
+
+/* 400px Phone Layout: no sideways scrolling, tap-sized 44px buttons */
+@media (max-width: 480px) {
+  .main .block-container,
+  [data-testid="stMainBlockContainer"] {
+    max-width: 100% !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    padding-top: 0.5rem !important;
+    overflow-x: hidden !important;
+  }
+
+  .main-header {
+    gap: 0.65rem;
+    padding: 0.5rem 0 0.75rem 0;
+    margin-bottom: 1rem;
+  }
+
+  .main-header img.college-logo {
+    height: 38px;
+  }
+
+  .main-header .header-text h1 {
+    font-size: 1.25rem;
+  }
+
+  .main-header .header-text p {
+    font-size: 0.8rem;
+  }
+
+  .badge-amber {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+  }
+
+  /* Tap-sized touch targets: minimum 44px height */
+  .stButton > button,
+  [data-testid="stBaseButton-secondary"],
+  [data-testid="stBaseButton-primary"],
+  .btn-copy-ans {
+    min-height: 44px !important;
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.88rem !important;
+  }
+
+  /* Prevent sideways overflow */
+  body, html, [data-testid="stAppViewContainer"] {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+  }
+}
+
+

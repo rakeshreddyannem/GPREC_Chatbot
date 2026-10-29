@@ -66,27 +66,39 @@ def run_update():
     start_time = time.time()
 
     # Step 1: Run Crawler
-    print("\n[Step 1/5] Running Web Crawler for Change Detection...")
+    print("\n[Step 1/6] Running Web Crawler for Change Detection...")
     crawler = GPRECCrawler()
     crawler.run()
 
     # Step 2: Run Notice Ingest
-    print("\n[Step 2/5] Running Notice & Deadline Ingestion...")
+    print("\n[Step 2/6] Running Notice & Deadline Ingestion...")
     ingest_notices_from_documents(crawler.db)
 
     # Step 3: Run Faculty Directory Ingestion & Updates
-    print("\n[Step 3/5] Running Faculty Directory Ingestion & Updates...")
+    print("\n[Step 3/6] Running Faculty Directory Ingestion & Updates...")
     from src.faculty_parser import ingest_all_departments
     ingest_all_departments(db=crawler.db, download_photos=True)
 
-    # Step 4: Run Vector Embedding and Ingestion
-    print("\n[Step 4/5] Running Vector Store Ingestion (Incremental Update)...")
+    # Step 4: Run Syllabus Ingestion (Content-Hash Refresh)
+    print("\n[Step 4/6] Running Syllabus Ingestion (Content-Hash Refresh)...")
+    from src.syllabus_parser import ingest_all_departments_syllabus
+    syllabus_report = ingest_all_departments_syllabus(db=crawler.db)
+
+    # Step 5: Run Vector Embedding and Ingestion
+    print("\n[Step 5/6] Running Vector Store Ingestion (Incremental Update)...")
     ingest_report = run_ingestion(db=crawler.db)
 
-    # Step 5: Clear Answer Cache
-    print("\n[Step 5/5] Clearing Answer Cache...")
+    # Step 6: Clear Answer Cache and Streamlit Caches
+    print("\n[Step 6/6] Clearing Answer Cache and Streamlit Caches...")
     cleared = clear_answer_cache()
     print(f"Cleared {cleared} cache resource(s).")
+    try:
+        import streamlit as st
+        st.cache_data.clear()
+        st.cache_resource.clear()
+        print("Cleared Streamlit data and resource caches.")
+    except Exception:
+        pass
 
     # Generate and save reports in data/reports/
     reports_dir = config.DATA_DIR / "reports"

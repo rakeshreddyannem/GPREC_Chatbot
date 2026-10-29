@@ -1,0 +1,32 @@
+PROBABILITY AND STATISTICAL ANALYSIS (PSA)
+III Semester :EEE
+                                                        Scheme : 2020
+Course Code Category Hours/Week Credits Maximum Marks
+BS202 Basic Science Course L T P C Continuous Internal Assessment End Exam TOTAL
+3 0 0 3 40 60 100
+Course Outcomes : At the end of the course the student will be able to
+CO1: Understand the concepts of Statistical Methods.
+CO2: Understand the concepts of probability theory and random variables.
+CO3: Analyze discrete and continuous probability distributions.
+CO4: Apply the test of hypothesis for large samples.
+CO5: Analyze the Test of significance for small samples and Classification of ANOVA.
+UNIT - I
+Statistical Methods
+Introduction to statistics, Frequency distribution, Measures of Central Tendency, Measures of dispersion, Moments; Skewness and Kurtosis; Co-efficient of Correlation, Lines of regression and Rank Correlation.
+UNIT - II
+Probability and Random Variables
+Basic concepts of probability, Addition and Multiplication law of probability, Baye’s Theorem; Random variables – discrete and continuous probability distributions and Functions, mean and variance of distributions.
+UNIT - III
+Probability Distributions
+Binomial, Poisson, Normal, Exponential and Gamma distributions, Evaluation of statistical parameters: Mean and Variance.
+UNIT - IV
+Test of Hypothesis for Large Samples
+Parameters and Statistics, Sampling distribution, Estimation: Point and Interval Estimation. Testing of hypothesis: Null hypothesis, Alternate hypothesis, level of significance, One-tailed and two-tailed tests.
+UNIT - V
+Test of Significance for Small Samples
+Introduction to t-distribution, F-distribution and Chi-square distribution. ANOVA for one-way and two-way classifications.
+Text Books
+1. B.S. Grewal, Higher Engineering Mathematics, Khanna Publishers, 2017.
+2. S.C. Gupta and V.K. Kapoor, Fundamentals of Mathematical Statistics, Sultan Chand & Sons.
+Reference Books
+1. Erwin Kreyszig, Advanced Engineering Mathematics, John Wiley & Sons.

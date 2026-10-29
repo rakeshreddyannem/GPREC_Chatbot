@@ -1,25 +1,25 @@
 # GPREC Faculty Directory Ingestion Report
 
-**Date Generated:** 2026-10-23 21:47:01  
+**Date Generated:** 2026-10-26 15:26:22  
 **Total Departments Scanned:** 10  
-**Total Faculty Records:** 411 (Regular: 411, Guest/Adjunct: 0)  
+**Total Faculty Records:** 411 (Regular: 381, Guest/Adjunct: 30)  
 **Photos Successfully Downloaded & Resized (≤400px):** 406  
 
 ## 1. Department Breakdown
 
 | Department | Total | Regular | Guest | Photos Downloaded | Missing Qualification |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| Civil Engineering (CE) | 26 | 26 | 0 | 22 | 0 |
-| Computer Science and Engineering (CSE) | 45 | 45 | 0 | 45 | 2 |
-| Electrical and Electronics Engineering (EEE) | 34 | 34 | 0 | 34 | 5 |
-| Electronics and Communication Engineering (ECE) | 45 | 45 | 0 | 45 | 5 |
-| Mechanical Engineering (ME) | 31 | 31 | 0 | 31 | 0 |
+| Civil Engineering (CE) | 26 | 25 | 1 | 22 | 0 |
+| Computer Science and Engineering (CSE) | 45 | 42 | 3 | 45 | 2 |
+| Electrical and Electronics Engineering (EEE) | 34 | 29 | 5 | 34 | 5 |
+| Electronics and Communication Engineering (ECE) | 45 | 40 | 5 | 45 | 5 |
+| Mechanical Engineering (ME) | 31 | 30 | 1 | 31 | 0 |
 | Humanities and Basic Sciences (H&S) | 45 | 45 | 0 | 44 | 0 |
-| CSE - Artificial Intelligence & Machine Learning (CSM) | 47 | 47 | 0 | 47 | 1 |
-| CSE - Data Science (CSD) | 47 | 47 | 0 | 47 | 1 |
-| Computer Science and Business Systems (CSB) | 47 | 47 | 0 | 47 | 1 |
-| Computer Science and Technology (CST) | 44 | 44 | 0 | 44 | 2 |
-| **TOTAL** | **411** | **411** | **0** | **406** | **17** |
+| CSE - Artificial Intelligence & Machine Learning (CSM) | 47 | 43 | 4 | 47 | 1 |
+| CSE - Data Science (CSD) | 47 | 43 | 4 | 47 | 1 |
+| Computer Science and Business Systems (CSB) | 47 | 43 | 4 | 47 | 1 |
+| Computer Science and Technology (CST) | 44 | 41 | 3 | 44 | 2 |
+| **TOTAL** | **411** | **381** | **30** | **406** | **17** |
 
 ## 2. Heads of Department (HODs) Identified
 

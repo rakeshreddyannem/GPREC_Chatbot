@@ -227,3 +227,63 @@ def test_system_prompt_rules_included():
     assert "For a simple fact question the whole answer is 1 to 2 sentences" in prompt
     assert "Bold only the key fact (name, date, amount), at most 2 bold items" in prompt
 
+
+def test_strip_think_tags():
+    """Verify <think>...</think> tags from reasoning models are completely stripped."""
+    raw = "<think>\nThinking about the user's question...\nChecking GPREC records.\n</think>\nThe tuition fee for B.Tech is subject to revision."
+    cleaned = clean_answer(raw)
+    assert "<think>" not in cleaned
+    assert "Thinking about" not in cleaned
+    assert cleaned == "The tuition fee for B.Tech is subject to revision."
+
+
+def test_strip_reasoning_analysis_prefix_with_answer():
+    """Verify that leading Analyze the Request block is stripped when followed by Answer:."""
+    raw = (
+        "1. **Analyze the Request:**\n"
+        " * **User Question:** \"what is the fee structure of EEE department\"\n"
+        " * **Role:** GPREC AI Student Assistant.\n"
+        " * **Rules:** Grounding, Fee Structure.\n\n"
+        "**Answer:**\n"
+        "The tuition fee for B.Tech programmes is subject to revision by the Government of Andhra Pradesh."
+    )
+    cleaned = clean_answer(raw)
+    assert "Analyze the Request" not in cleaned
+    assert "User Question" not in cleaned
+    assert cleaned == "The tuition fee for B.Tech programmes is subject to revision by the Government of Andhra Pradesh."
+
+
+def test_reject_pure_reasoning_scratchpad_without_answer():
+    """Verify pure reasoning scratchpad with no actual answer returns empty string."""
+    from src.rag_pipeline import is_pure_reasoning_scratchpad
+    raw_scratchpad = (
+        "1. **Analyze the Request:**\n"
+        " * **User Question:** \"what is the fee structure of EEE department\"\n"
+        " * **Role:** GPREC AI Student Assistant.\n"
+        " * **Date:** 2026-10-24.\n"
+        " * **Rules:** Grounding, Verified Facts Priority, No Inference.\n"
+        " * **Evaluate Available Context:** Source 1 mentions tuition fee is subject to revision.\n"
+        " * **Formulate Answer based on Rules:** Rule 9, Rule 7.\n"
+        " * **Style:**"
+    )
+    assert is_pure_reasoning_scratchpad(raw_scratchpad) is True
+    assert clean_answer(raw_scratchpad) == ""
+
+
+def test_generate_prompts_tuple_and_fallback():
+    """Verify generate_prompts returns (system_prompt, user_prompt) and generate_prompt returns combined str."""
+    from src.rag_pipeline import RAGPipeline
+    pipeline = RAGPipeline.__new__(RAGPipeline)
+    sys_p, usr_p = pipeline.generate_prompts("Who is the HOD of EEE?", [])
+    assert isinstance(sys_p, str) and len(sys_p) > 0
+    assert isinstance(usr_p, str) and len(usr_p) > 0
+    assert "GPREC AI Student Assistant" in sys_p
+    assert "Who is the HOD of EEE?" in usr_p
+
+    # generate_prompt returns the combined prompt
+    combined = pipeline.generate_prompt("Who is the HOD of EEE?", [])
+    assert isinstance(combined, str)
+    assert sys_p in combined
+    assert usr_p in combined
+
+

@@ -214,6 +214,6 @@ class ResponseFormatter:
             "answer": answer_text,
             "missing_info": missing,
             "where_to_look": where_to_look,
-            "confidence": "Medium",
+            "confidence": "Low",
             "confidence_reason": "Partial information retrieved from official sources"
         }

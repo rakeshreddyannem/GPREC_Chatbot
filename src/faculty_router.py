@@ -65,7 +65,7 @@ DEPT_MAP = {
     "computer science and technology": "Computer Science and Technology"
 }
 
-KNOWN_DEPT_CODES = "CE, CSE, EEE, ECE, ME, H&S, CSM, CSD, CSB, CST"
+KNOWN_DEPT_CODES = "CE, CSE, EEE, ECE, ME, H&S, CSM, CSD, CSB"
 
 
 def resolve_department(text: str) -> Optional[str]:
@@ -153,7 +153,7 @@ def handle_faculty_query(query: str, db: DatabaseManager) -> Optional[Dict[str, 
                         "response_type": ResponseType.NOT_FOUND,
                         "answer": f"GPREC does not have an '{unknown_candidate}' department. Available departments are: {KNOWN_DEPT_CODES}.",
                         "sources": [],
-                        "confidence": "High",
+                        "confidence": "Low",
                         "confidence_reason": "Department not found in GPREC Directory"
                     }
 
@@ -162,9 +162,9 @@ def handle_faculty_query(query: str, db: DatabaseManager) -> Optional[Dict[str, 
                 "response_type": ResponseType.CLARIFY,
                 "answer": f"Which department's HOD are you looking for? ({KNOWN_DEPT_CODES})",
                 "clarify_question": f"Which department's HOD are you looking for? ({KNOWN_DEPT_CODES})",
-                "clarify_options": ["CE", "CSE", "EEE", "ECE", "ME", "H&S", "CSM", "CSD", "CSB", "CST"],
+                "clarify_options": ["CE", "CSE", "EEE", "ECE", "ME", "H&S", "CSM", "CSD", "CSB"],
                 "sources": [],
-                "confidence": "High",
+                "confidence": "Medium",
                 "confidence_reason": "Department clarification needed for HOD query"
             }
 
@@ -200,7 +200,7 @@ def handle_faculty_query(query: str, db: DatabaseManager) -> Optional[Dict[str, 
                 "response_type": ResponseType.NOT_FOUND,
                 "answer": f"I could not find an official HOD listing for the {dept} department.",
                 "sources": [],
-                "confidence": "High",
+                "confidence": "Low",
                 "confidence_reason": f"No HOD record in database for {dept}"
             }
 
@@ -215,9 +215,9 @@ def handle_faculty_query(query: str, db: DatabaseManager) -> Optional[Dict[str, 
                 "response_type": ResponseType.CLARIFY,
                 "answer": f"Which department's faculty count are you looking for? ({KNOWN_DEPT_CODES})",
                 "clarify_question": f"Which department's faculty count are you looking for? ({KNOWN_DEPT_CODES})",
-                "clarify_options": ["CE", "CSE", "EEE", "ECE", "ME", "H&S", "CSM", "CSD", "CSB", "CST"],
+                "clarify_options": ["CE", "CSE", "EEE", "ECE", "ME", "H&S", "CSM", "CSD", "CSB"],
                 "sources": [],
-                "confidence": "High",
+                "confidence": "Medium",
                 "confidence_reason": "Department clarification needed for faculty count"
             }
 
@@ -228,7 +228,7 @@ def handle_faculty_query(query: str, db: DatabaseManager) -> Optional[Dict[str, 
             last_checked = faculty_list[0].get("last_checked") or "official college website"
             date_display = last_checked.split()[0] if " " in last_checked else last_checked
 
-            guest_str = f" (and {guest_count} guest/adjunct members)" if guest_count > 0 else ""
+            guest_str = f" and **{guest_count}** guest faculty members" if guest_count > 0 else ""
             ans = f"The {dept} department has **{regular_count}** regular faculty members{guest_str}, as of {date_display}."
 
             return {
@@ -248,7 +248,7 @@ def handle_faculty_query(query: str, db: DatabaseManager) -> Optional[Dict[str, 
                 "response_type": ResponseType.NOT_FOUND,
                 "answer": f"No faculty records were found for the {dept} department.",
                 "sources": [],
-                "confidence": "High",
+                "confidence": "Low",
                 "confidence_reason": f"No faculty records in database for {dept}"
             }
 
@@ -271,7 +271,7 @@ def handle_faculty_query(query: str, db: DatabaseManager) -> Optional[Dict[str, 
                         "response_type": ResponseType.NOT_FOUND,
                         "answer": f"GPREC does not have an '{unknown_candidate}' department. Available departments are: {KNOWN_DEPT_CODES}.",
                         "sources": [],
-                        "confidence": "High",
+                        "confidence": "Low",
                         "confidence_reason": "Department not found in GPREC Directory"
                     }
 
@@ -279,9 +279,9 @@ def handle_faculty_query(query: str, db: DatabaseManager) -> Optional[Dict[str, 
                 "response_type": ResponseType.CLARIFY,
                 "answer": f"Which department's faculty list are you looking for? ({KNOWN_DEPT_CODES})",
                 "clarify_question": f"Which department's faculty list are you looking for? ({KNOWN_DEPT_CODES})",
-                "clarify_options": ["CE", "CSE", "EEE", "ECE", "ME", "H&S", "CSM", "CSD", "CSB", "CST"],
+                "clarify_options": ["CE", "CSE", "EEE", "ECE", "ME", "H&S", "CSM", "CSD", "CSB"],
                 "sources": [],
-                "confidence": "High",
+                "confidence": "Medium",
                 "confidence_reason": "Department clarification needed for faculty list"
             }
 
@@ -307,7 +307,10 @@ def handle_faculty_query(query: str, db: DatabaseManager) -> Optional[Dict[str, 
                 else:
                     others.append(f)
 
-            lines = [f"Faculty members of the Department of **{dept}**:\n"]
+            regular_count = len(faculty_list) - len(guest_faculty)
+            guest_count = len(guest_faculty)
+
+            lines = [f"Faculty members of the Department of **{dept}** ({regular_count} regular faculty, {guest_count} guest faculty):\n"]
 
             def format_group(group_title: str, members: List[Dict[str, Any]]):
                 if not members:
@@ -320,11 +323,15 @@ def handle_faculty_query(query: str, db: DatabaseManager) -> Optional[Dict[str, 
                     lines.append(f"* **{m['name']}**{hod_badge}{qual_str}{link_str}")
                 lines.append("")
 
+            lines.append("## Regular Faculty\n")
             format_group("Professors", professors)
             format_group("Associate Professors", assoc_profs)
             format_group("Assistant Professors", asst_profs)
-            format_group("Guest / Adjunct Faculty", guest_faculty)
-            format_group("Other Faculty", others)
+            format_group("Other Regular Faculty", others)
+
+            if guest_faculty:
+                lines.append("## Guest Faculty\n")
+                format_group("Guest / Adjunct Faculty", guest_faculty)
 
             return {
                 "response_type": ResponseType.ANSWERED,
@@ -461,7 +468,7 @@ def handle_faculty_query(query: str, db: DatabaseManager) -> Optional[Dict[str, 
                 "response_type": ResponseType.NOT_FOUND,
                 "answer": f"I could not find a faculty member named '{search_target}' in the GPREC directory.",
                 "sources": [],
-                "confidence": "High",
+                "confidence": "Low",
                 "confidence_reason": "No faculty record found in directory"
             }
 

@@ -1,0 +1,24 @@
+# Ignore local virtual environment and caches
+.venv/
+env/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Ignore git files
+.git/
+.gitignore
+
+# Ignore scratch / dev reports / temp artifacts
+.pptx-build/
+deliverables/
+scratch/
+reports/crawl_report_*.json
+
+# Ignore backup databases (keep main gprec_knowledge.db)
+*.bak
+*.db.bak

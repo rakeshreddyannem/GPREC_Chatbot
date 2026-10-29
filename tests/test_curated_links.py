@@ -17,10 +17,10 @@ from src.database import DatabaseManager
 
 
 def test_curated_links_inventory():
-    """Verify all 25 official links requested by user are present and correctly formed."""
+    """Verify all official links are present and correctly formed."""
     urls = [item["url"] for item in CURATED_OFFICIAL_LINKS]
-    assert len(urls) == 25, f"Expected 25 unique links, found {len(urls)}"
-    assert len(set(urls)) == 25, "Duplicate URLs found in CURATED_OFFICIAL_LINKS"
+    assert len(urls) >= 25, f"Expected at least 25 unique links, found {len(urls)}"
+    assert len(set(urls)) == len(urls), "Duplicate URLs found in CURATED_OFFICIAL_LINKS"
 
     expected_urls = [
         "https://www.gprec.ac.in/placementdetails/2025-placements.pdf",
@@ -200,3 +200,9 @@ def test_rag_pipeline_returns_hyperlinks_offline(tmp_path):
     assert res_syl["confidence"] == "High"
     assert "https://www.gprec.ac.in/scheme-23/CSE%20S-23%20II%20Year%20Syllabus.pdf" in res_syl["answer"]
     assert any("CSE%20S-23%20II%20Year%20Syllabus.pdf" in s["source_url"] for s in res_syl["sources"])
+
+    # 3. Fee structure query
+    res_fees = pipeline.answer_question("what is the fee structure of EEE department")
+    assert res_fees["response_type"] == ResponseType.ANSWERED
+    assert res_fees["confidence"] == "High"
+    assert "https://www.gprec.ac.in/admissions/fee-structure/" in res_fees["answer"]

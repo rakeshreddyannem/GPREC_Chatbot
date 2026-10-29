@@ -89,7 +89,7 @@ DEPARTMENT_CONFIGS = [
         "short_code": "CST",
         "slug": "computer_science_and_technology",
         "url": "https://www.gprec.ac.in/computer-science-and-technology/",
-        "aliases": ["cst", "computer science and technology"]
+        "aliases": ["cst", "computer science and technology", "cs technology"]
     }
 ]
 
@@ -221,7 +221,25 @@ def parse_faculty_page(html_content: str, dept_name: str, source_url: str) -> Li
             email = m.group(0) if m else None
 
         is_hod = is_hod_designation(designation)
-        is_guest = is_guest_designation(designation)
+
+        # Check if card appears after a heading containing 'guest' within faculty section until next major heading
+        is_under_guest = 0
+        for prev in table.find_all_previous(["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "strong", "b"]):
+            prev_txt = prev.get_text().strip().lower()
+            if not prev_txt:
+                continue
+            is_heading = (
+                prev.name in ["h1", "h2", "h3", "h4", "h5", "h6"]
+                or ((prev.name in ["p", "div", "strong", "b"] or "vc_custom_heading" in prev.get("class", []))
+                    and any(k in prev_txt for k in ["faculty", "staff", "department", "profiles", "board of studies", "guest", "regular"])
+                    and len(prev_txt) < 60)
+            )
+            if is_heading:
+                if "guest" in prev_txt or "visiting" in prev_txt or "adjunct" in prev_txt:
+                    is_under_guest = 1
+                break
+
+        is_guest = 1 if (is_under_guest or is_guest_designation(designation)) else 0
 
         record = {
             "name": name,

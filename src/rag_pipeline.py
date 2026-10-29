@@ -1,5 +1,6 @@
 import os
 import re
+import logging
 from typing import List, Dict, Any, Optional, Tuple
 from google import genai
 from google.genai import types
@@ -8,12 +9,373 @@ import config
 from src.vectorstore import VectorStore
 from src.embeddings import Embedder
 from src.database import DatabaseManager
+from src.reliability import ResponseType
+
+logger = logging.getLogger(__name__)
+
+# --- Guard: Instruction-Echo Markers & Leak Counter ---
+INSTRUCTION_ECHO_MARKERS = [
+    r'\banalyze\s+the\s+request\b',
+    r'\bconstraints?\s*:',
+    r'\brole\s*:',
+    r'\btask\s*:',
+    r'\bgrounding\s*:',
+    r'\bverified\s+facts\s+priority\b',
+    r'\bcritical\s+reliability\s+rules\b',
+    r'\bforbid\s+inference\b',
+    r'\bdate\s+handling\s*:',
+    r'\bcritical\s+output\s+instruction\b',
+    r'\btone\s+and\s+style\s+guidelines\b',
+    r'(?:^|\n)\s*\d+\.\s*(?:grounding|verified\s+facts|forbid\s+inference|date\s+handling|acronyms|sensitive\s+info|completeness|exam\s+timetables|fee\s+structure|official\s+hyperlinks)\b',
+    r'\brule\s*\d+\s*[:(]'
+]
+
+_INSTRUCTION_ECHO_REGEX = re.compile("|".join(INSTRUCTION_ECHO_MARKERS), re.IGNORECASE)
+
+INSTRUCTION_LEAK_COUNTER = 0
+
+
+def get_instruction_leak_count() -> int:
+    global INSTRUCTION_LEAK_COUNTER
+    return INSTRUCTION_LEAK_COUNTER
+
+
+def increment_instruction_leak_count() -> int:
+    global INSTRUCTION_LEAK_COUNTER
+    INSTRUCTION_LEAK_COUNTER += 1
+    return INSTRUCTION_LEAK_COUNTER
+
+
+def reset_instruction_leak_count() -> None:
+    global INSTRUCTION_LEAK_COUNTER
+    INSTRUCTION_LEAK_COUNTER = 0
+
+
+SAFE_FALLBACK_TEXT = "Please refer to the official GPREC notice board and website for details regarding this inquiry."
+
+
+def has_instruction_echo(text: str) -> bool:
+    """Returns True if the text starts with or contains instruction-echo markers."""
+    if not text or not isinstance(text, str):
+        return False
+    return bool(_INSTRUCTION_ECHO_REGEX.search(text))
+
+
+# --- Structured Notices Direct Routing (No LLM) ---
+def is_notices_query(query: str) -> Tuple[bool, str]:
+    """
+    Checks if query is asking for latest notices, exam notices, timetable, or last date.
+    Returns (is_notice_q, category).
+    """
+    if not query or not isinstance(query, str):
+        return False, ""
+    q = query.lower().strip()
+
+    # Exclude faculty queries
+    if any(k in q for k in ["faculty", "professor", "hod", "principal", "staff"]):
+        return False, ""
+
+    # Last date / deadline
+    if any(k in q for k in ["last date", "deadline", "due date", "closing date", "on or before"]):
+        return True, "deadline"
+
+    # Timetable / exam schedule
+    if any(k in q for k in ["timetable", "time table", "exam schedule", "examination schedule", "exam dates", "dates of exam"]):
+        return True, "timetable"
+
+    # Exam notices
+    if any(k in q for k in ["exam notice", "exam notices", "examination notice", "examination notices", "exam circular", "exam circulars"]):
+        return True, "exam_notice"
+
+    # Latest notices / circulars
+    if any(k in q for k in [
+        "latest notice", "latest notices", "recent notice", "recent notices",
+        "new notice", "new notices", "latest circular", "latest circulars",
+        "recent circular", "recent circulars", "latest notification", "latest notifications"
+    ]):
+        return True, "latest_notice"
+
+    if any(w in q for w in ["latest", "recent", "new", "current"]) and any(t in q for t in ["notice", "notices", "circular", "circulars", "notification", "notifications"]):
+        return True, "latest_notice"
+
+    if re.search(r'\b(?:list|show|get|tell me|give)\s+(?:the\s+)?(?:all\s+)?notices\b', q):
+        return True, "latest_notice"
+
+    return False, ""
+
+
+def handle_notices_query(query: str, db: DatabaseManager) -> Optional[Dict[str, Any]]:
+    """
+    Answers 'latest notices / exam notices / timetable / last date' questions directly
+    from the notices table (title, date, department, Open document link), without the LLM.
+    If the table has no match, says so in one sentence.
+    """
+    is_notice, category = is_notices_query(query)
+    if not is_notice:
+        return None
+
+    from src.reliability import ResponseType
+
+    q_lower = query.lower()
+    matched_notices: List[Dict[str, Any]] = []
+
+    try:
+        with db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='notices'")
+            if not cursor.fetchone():
+                return {
+                    "response_type": ResponseType.NOT_FOUND,
+                    "answer": "No notices matching your query were found in the official notices records.",
+                    "sources": [],
+                    "confidence": "Low",
+                    "confidence_reason": "No matching notices in official records"
+                }
+
+            if category == "deadline":
+                cursor.execute("""
+                    SELECT * FROM notices
+                    WHERE is_active = 1 AND (
+                        deadline_date IS NOT NULL OR
+                        LOWER(raw_text) LIKE '%last date%' OR
+                        LOWER(raw_text) LIKE '%on or before%' OR
+                        LOWER(raw_text) LIKE '%due%' OR
+                        LOWER(title) LIKE '%last date%' OR
+                        LOWER(title) LIKE '%deadline%' OR
+                        LOWER(notice_type) IN ('fee notification', 'revaluation')
+                    )
+                    ORDER BY CASE WHEN deadline_date IS NOT NULL AND deadline_date != '' THEN deadline_date ELSE '9999-12-31' END ASC,
+                             CASE WHEN published_date IS NOT NULL AND published_date != '' THEN published_date ELSE '1970-01-01' END DESC
+                    LIMIT 10
+                """)
+                matched_notices = [dict(row) for row in cursor.fetchall()]
+            elif category == "timetable":
+                cursor.execute("""
+                    SELECT * FROM notices
+                    WHERE is_active = 1 AND (
+                        LOWER(notice_type) = 'timetable' OR
+                        LOWER(title) LIKE '%timetable%' OR
+                        LOWER(title) LIKE '%time table%' OR
+                        LOWER(raw_text) LIKE '%timetable%' OR
+                        LOWER(raw_text) LIKE '%time table%' OR
+                        LOWER(title) LIKE '%schedule%'
+                    )
+                    ORDER BY CASE WHEN published_date IS NOT NULL AND published_date != '' THEN published_date ELSE '1970-01-01' END DESC,
+                             notice_id DESC
+                    LIMIT 10
+                """)
+                matched_notices = [dict(row) for row in cursor.fetchall()]
+            elif category == "exam_notice":
+                cursor.execute("""
+                    SELECT * FROM notices
+                    WHERE is_active = 1 AND (
+                        LOWER(notice_type) IN ('timetable', 'results', 'revaluation', 'exam', 'examination') OR
+                        LOWER(title) LIKE '%exam%' OR
+                        LOWER(raw_text) LIKE '%exam%' OR
+                        LOWER(title) LIKE '%sessional%' OR
+                        LOWER(department) LIKE '%exam%' OR
+                        LOWER(source_page) LIKE '%exam%' OR
+                        LOWER(attachment_urls) LIKE '%exam%'
+                    )
+                    ORDER BY CASE WHEN published_date IS NOT NULL AND published_date != '' THEN published_date ELSE '1970-01-01' END DESC,
+                             notice_id DESC
+                    LIMIT 10
+                """)
+                matched_notices = [dict(row) for row in cursor.fetchall()]
+            else:  # latest_notice
+                cursor.execute("""
+                    SELECT * FROM notices
+                    WHERE is_active = 1
+                    ORDER BY CASE WHEN published_date IS NOT NULL AND published_date != '' THEN published_date ELSE '1970-01-01' END DESC,
+                             notice_id DESC
+                    LIMIT 10
+                """)
+                matched_notices = [dict(row) for row in cursor.fetchall()]
+
+    except Exception as e:
+        logger.error("Error querying notices table: %s", e)
+        return {
+            "response_type": ResponseType.NOT_FOUND,
+            "answer": "No notices matching your query were found in the official notices records.",
+            "sources": [],
+            "confidence": "Low",
+            "confidence_reason": "No matching notices in official records"
+        }
+
+    # Filter by specific branch or program if specified in query
+    if matched_notices:
+        prog_terms = ["b.tech", "m.tech", "mba", "mca"]
+        for pt in prog_terms:
+            if pt in q_lower:
+                filtered = [
+                    n for n in matched_notices 
+                    if pt in (str(n.get("title", "")) + " " + str(n.get("raw_text", "")) + " " + str(n.get("program", "")) + " " + str(n.get("attachment_urls", ""))).lower()
+                ]
+                if filtered:
+                    matched_notices = filtered
+                else:
+                    matched_notices = []
+                break
+
+        query_words = set(re.findall(r'\b[a-zA-Z]{3,}\b', q_lower))
+        generic_words = {
+            "what", "when", "where", "which", "who", "whom", "whose", "why", "how",
+            "latest", "recent", "current", "upcoming", "new", "list", "show", "tell",
+            "give", "details", "info", "information", "notice", "notices", "circular",
+            "circulars", "notification", "notifications", "exam", "exams", "examination",
+            "examinations", "dates", "date", "schedule", "timetable", "the", "for", "and",
+            "are", "with", "from", "any", "all", "about", "there", "department"
+        }
+        topic_keywords = query_words - generic_words
+        if topic_keywords and matched_notices:
+            filtered_topic = [
+                n for n in matched_notices
+                if any(tk in (str(n.get("title", "")) + " " + str(n.get("raw_text", "")) + " " + str(n.get("department") or "") + " " + str(n.get("program") or "")).lower() for tk in topic_keywords)
+            ]
+            matched_notices = filtered_topic
+
+    # If the table has no match, say so in one sentence
+    if not matched_notices:
+        return {
+            "response_type": ResponseType.NOT_FOUND,
+            "answer": "No notices matching your query were found in the official notices records.",
+            "sources": [],
+            "confidence": "Low",
+            "confidence_reason": "No matching notices in official records"
+        }
+
+    display_notices = matched_notices[:5]
+    bullets = []
+    sources = []
+    for n in display_notices:
+        title = (n.get("title") or "Notice").strip()
+        date_val = n.get("published_date") or n.get("important_date") or "N/A"
+        deadline_val = n.get("deadline_date")
+        dept_val = n.get("department") or "General"
+        doc_url = (n.get("attachment_urls") or "").split(",")[0].strip() or n.get("source_url") or n.get("source_page") or "https://www.gprec.ac.in"
+        bullet = f"* **{title}** | Date: {date_val} (based on the notice dated {date_val})"
+        if deadline_val:
+            bullet += f" | Deadline: {deadline_val}"
+        bullet += f" | Department: {dept_val} | [Open document]({doc_url})"
+        bullets.append(bullet)
+        sources.append({
+            "title": f"Notice: {title}",
+            "source_url": doc_url,
+            "page": None,
+            "published_date": n.get("published_date")
+        })
+
+    answer_text = "Here are the latest official notices:\n\n" + "\n".join(bullets)
+    return {
+        "response_type": ResponseType.ANSWERED,
+        "answer": answer_text,
+        "sources": sources,
+        "confidence": "High",
+        "confidence_reason": "Structured notices table"
+    }
+
+
+# --- Confidence Calculation ---
+def compute_confidence(
+    response_type: Any,
+    answer_text: str = "",
+    contexts: Optional[List[Dict[str, Any]]] = None,
+    is_structured_table: bool = False,
+    verification_passed: bool = True
+) -> Tuple[str, str]:
+    """
+    Computes confidence level and explanation based on evidence:
+    - High: answer comes from a structured table (faculty, notices, verified facts)
+            or top retrieval score is strong (>= 0.38) and at least 2 chunks support it.
+    - Medium: one weak or partly matching source.
+    - Low: PARTIAL or NOT_FOUND, or the answer says information is missing.
+    """
+    from src.reliability import ResponseType
+    
+    contexts = contexts or []
+    ans_lower = (answer_text or "").lower()
+
+    # Low: PARTIAL or NOT_FOUND, or the answer says information is missing
+    missing_info_indicators = [
+        "not available in official",
+        "information is not available",
+        "information is missing",
+        "not available",
+        "missing",
+        "could not find",
+        "couldn't find",
+        "not find",
+        "does not specify",
+        "do not specify",
+        "not specify",
+        "does not mention",
+        "do not mention",
+        "not mention",
+        "no record",
+        "no official record",
+        "only confirm",
+        "unconfirmed details",
+        "unconfirmed"
+    ]
+    is_missing_info = any(ind in ans_lower for ind in missing_info_indicators)
+
+    if (
+        response_type in (ResponseType.PARTIAL, ResponseType.NOT_FOUND, "PARTIAL", "NOT_FOUND")
+        or is_missing_info
+    ):
+        return "Low", "Partial, not found, or information is missing in official sources"
+
+    # High: structured table (faculty, notices, verified facts)
+    if is_structured_table and response_type in (ResponseType.ANSWERED, "ANSWERED"):
+        return "High", "Answer comes from official structured database records"
+
+    # High: top retrieval score is strong and at least 2 chunks support it
+    if len(contexts) >= 2 and response_type in (ResponseType.ANSWERED, "ANSWERED") and verification_passed:
+        top_score = contexts[0].get("score", 0.0)
+        second_score = contexts[1].get("score", 0.0)
+        if top_score >= 0.38 and second_score >= 0.20:
+            return "High", "Strong retrieval score supported by multiple official sources"
+
+    # Medium: one weak or partly matching source (or unverified/single chunk)
+    return "Medium", "Single or partly matching source; verify against official website"
+
+
+def is_pure_reasoning_scratchpad(text: str) -> bool:
+    """Detects whether text is an unrendered reasoning / thinking scratchpad rather than a student answer."""
+    if not text or not isinstance(text, str):
+        return False
+    t_lower = text.lower().strip()
+    scratchpad_indicators = [
+        "analyze the request",
+        "evaluate available context",
+        "formulate answer based on rules",
+        "role: gprec ai",
+        "role: gprec",
+        "user question:",
+        "rules: grounding",
+        "forbid inference:",
+        "fee structure rule:",
+        "rule 9 (fee structure)",
+        "rule 7 (completeness)",
+        "rule 3 (no inference)",
+        "rule 8 (exam timetables"
+    ]
+    matches = sum(1 for ind in scratchpad_indicators if ind in t_lower)
+    if matches >= 2 or t_lower.startswith("analyze the request") or t_lower.startswith("1. **analyze the request") or t_lower.startswith("**analyze the request"):
+        # If there is an explicit Answer / Final Answer section later in the text, it's not a pure scratchpad
+        if re.search(r'\n\s*(?:[-*•]\s*)?(?:\*{0,2}(?:final\s+)?answer(?:\s+to\s+student)?(?::\*{0,2}|\*{0,2}:)|#{1,4}\s*(?:final\s+)?answer(?::\*{0,2}|\*{0,2}:)?)\s*\S+', text, flags=re.IGNORECASE):
+            return False
+        return True
+    return False
 
 
 def clean_answer(text: str) -> str:
     """Post-processes LLM-generated answers for ANSWERED and PARTIAL responses.
 
     Rules:
+    - Removes <think>...</think> reasoning blocks from thinking models (DeepSeek-R1, QwQ)
+    - Removes internal analysis/prompt breakdown blocks if followed by an answer
+    - Rejects pure reasoning scratchpads where model exhausted tokens without an answer
     - Removes citation markers matching 【[^】]*】, [1], [2] style markers, and (Source: ...) parts
     - Deletes everything from a line starting with Sources:, Source:, References:, Evidence:, or Context:
       to the end of that block, including its bullets
@@ -28,6 +390,34 @@ def clean_answer(text: str) -> str:
         return ""
 
     cleaned = text
+
+    # 0a. Strip thinking/reasoning tags from reasoning models (e.g. DeepSeek-R1, QwQ)
+    cleaned = re.sub(r'<think>[\s\S]*?</think>', '', cleaned, flags=re.IGNORECASE).strip()
+
+    # 0b. If the response starts with an internal reasoning / prompt-analysis section followed by an Answer marker,
+    # extract only the final answer portion.
+    reasoning_prefix_pattern = re.compile(
+        r'^\s*(?:'
+        r'(?:\d+\.\s*)?\*{0,2}(?:analyze\s+the\s+request|analysis|thinking(?:\s+process)?|chain\s+of\s+thought|internal\s+reasoning)\*{0,2}[:\s]'
+        r'[\s\S]*?'
+        r'(?:'
+        r'\n\s*(?:[-*•]\s*)?(?:'
+        r'\*{0,2}(?:final\s+)?answer(?:\s+to\s+student)?(?::\*{0,2}|\*{0,2}:)'
+        r'|#{1,4}\s*(?:final\s+)?answer(?::\*{0,2}|\*{0,2}:)?'
+        r'|\*{0,2}(?:final\s+)?response(?::\*{0,2}|\*{0,2}:)'
+        r')\s*'
+        r')'
+        r')',
+        re.IGNORECASE
+    )
+    match_reasoning = reasoning_prefix_pattern.match(cleaned)
+    if match_reasoning:
+        cleaned = cleaned[match_reasoning.end():].lstrip()
+        cleaned = re.sub(r'^(?:\*{1,2}|#{1,4})\s*', '', cleaned)
+
+    # 0c. If text is purely a reasoning scratchpad without an answer, reject it as empty
+    if is_pure_reasoning_scratchpad(cleaned):
+        return ""
 
     # 1. Remove citation markers matching 【[^】]*】, bracketed numbers [1], [2], [1-3], [1†...], and (Source: ...)
     cleaned = re.sub(r'【[^】]*】', '', cleaned)
@@ -121,6 +511,8 @@ def clean_answer(text: str) -> str:
     def _md_link_sub(match):
         anchor = match.group(1).strip()
         url = match.group(2).strip()
+        if anchor.lower() in ["open document", "official portal", "view notice"]:
+            return match.group(0)
         if anchor.lower() in ["link", "here", "download document", "source", "url", url.lower()]:
             return ""
         return anchor
@@ -414,7 +806,7 @@ class RAGPipeline:
         deduped = ChunkDeduplicator.deduplicate_chunks(filtered, similarity_threshold=0.85)
         return deduped[:top_k]
 
-    def generate_prompt(
+    def generate_prompts(
         self, 
         query: str, 
         contexts: List[Dict[str, Any]], 
@@ -423,7 +815,7 @@ class RAGPipeline:
         entity_directory: Optional[List[Dict[str, Any]]] = None,
         notices: Optional[List[Dict[str, Any]]] = None,
         curated_links: Optional[List[Dict[str, Any]]] = None
-    ) -> str:
+    ) -> Tuple[str, str]:
         from datetime import datetime
         today = datetime.now().strftime("%Y-%m-%d")
 
@@ -475,7 +867,7 @@ class RAGPipeline:
         if verification_feedback:
             feedback_instruction = f"\nCORRECTION REQUIRED FROM PREVIOUS ATTEMPT:\n{verification_feedback}\nRewrite your answer removing unsupported claims.\n"
 
-        prompt = f"""You are the GPREC AI Student Assistant, an official conversational chatbot for G. Pulla Reddy Engineering College (GPREC), Kurnool.
+        system_prompt = f"""You are the GPREC AI Student Assistant, an official conversational chatbot for G. Pulla Reddy Engineering College (GPREC), Kurnool.
 
 TODAY'S DATE: {today}
 
@@ -492,6 +884,12 @@ CRITICAL RELIABILITY RULES:
 8. Exam Timetables: When asked about exam timetables or schedules, present the newest relevant timetables with published date, notice type badge, and direct document link. Never dump large raw unstructured lists of 20+ bullets.
 9. Fee Structure: When asked about fee structure, cite official APHERMC / Government of Andhra Pradesh tuition fee notifications with academic year and as-of date. Clarify that B.Tech tuition fee applies college-wide across engineering branches (including EEE) for Autonomous colleges under Category-A (Convenor Quota) and Category-B (Management Quota).
 10. Official Hyperlinks: When official relevant document or portal links are provided in the context or direct links section, you MUST provide them as clickable markdown hyperlinks `[Title](URL)` in the response so students and visitors can directly open or download them.{feedback_instruction}
+
+CRITICAL OUTPUT INSTRUCTION (STRICT):
+- Output ONLY the final direct answer for the student.
+- DO NOT output any thinking process, reasoning steps, chain of thought, scratchpad, or rule-by-rule analysis.
+- NEVER start with "Analyze the Request:", "Thinking:", "Evaluate Context:", or "1. **Analyze the Request:**".
+- Begin directly with the answer in the first sentence.
 
 TONE AND STYLE GUIDELINES (STRICT):
 - First sentence is the direct answer to exactly what was asked. No greetings, no "Based on the official GPREC sources", no "According to the documents", no filler openers.
@@ -529,14 +927,48 @@ Answer: The internal lab examinations are scheduled from **10 Nov 2026** to **15
 Example 4 (Not Found Question):
 Student Question: Is there an indoor swimming pool facility on the campus?
 Answer: There is no swimming pool facility listed in the official college records. You can check with the Department of Physical Education or the campus administrative office.
---------------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------"""
 
-{curated_links_str}{verified_facts_str}{notices_str}--- AVAILABLE GPREC CONTEXT ---
+        user_prompt = f"""{curated_links_str}{verified_facts_str}{notices_str}--- AVAILABLE GPREC CONTEXT ---
 {context_str}
 
 Student Question: {query}
 Answer:"""
-        return prompt
+
+        return system_prompt, user_prompt
+
+    def generate_prompt(
+        self, 
+        query: str, 
+        contexts: List[Dict[str, Any]],
+        verified_facts: Optional[List[Dict[str, Any]]] = None,
+        entity_directory: Optional[List[Dict[str, Any]]] = None,
+        notices: Optional[List[Dict[str, Any]]] = None,
+        curated_links: Optional[List[Dict[str, Any]]] = None,
+        verification_feedback: Optional[str] = None
+    ) -> str:
+        gen_fn = getattr(self, "generate_prompts", None) or getattr(RAGPipeline, "generate_prompts", None)
+        if gen_fn is not None:
+            if hasattr(self, "generate_prompts"):
+                sys_p, usr_p = self.generate_prompts(
+                    query, contexts,
+                    verified_facts=verified_facts,
+                    entity_directory=entity_directory,
+                    notices=notices,
+                    curated_links=curated_links,
+                    verification_feedback=verification_feedback
+                )
+            else:
+                sys_p, usr_p = RAGPipeline.generate_prompts(
+                    self, query, contexts,
+                    verified_facts=verified_facts,
+                    entity_directory=entity_directory,
+                    notices=notices,
+                    curated_links=curated_links,
+                    verification_feedback=verification_feedback
+                )
+            return f"{sys_p}\n\n{usr_p}"
+        return f"Context: {contexts}\n\nQuestion: {query}"
 
     def answer_question(
         self, 
@@ -549,6 +981,11 @@ Answer:"""
         retrieval_duration_ms = 0.0
         llm_duration_ms = 0.0
         ver_duration_ms = 0.0
+
+        from src.reliability import (
+            ResponseType, AmbiguityDetector, AnswerVerifier, 
+            SensitiveInfoFilter, ResponseFormatter
+        )
 
         # 0. Check Faculty Directory directly on raw user query (Deterministic code routing, NO LLM)
         from src.faculty_router import handle_faculty_query
@@ -563,6 +1000,21 @@ Answer:"""
             }
             print(f"[DEBUG TIMING] Faculty Router (Direct) | Total: {total_duration_ms:.1f}ms")
             return direct_faculty_res
+
+        # 0b. Check Notices directly on raw user query (Deterministic code routing, NO LLM)
+        direct_notice_res = handle_notices_query(query, self.db)
+        if direct_notice_res is not None:
+            if direct_notice_res.get("response_type") == ResponseType.NOT_FOUND:
+                direct_notice_res["answer"] = "I couldn't find this information in the official notices records. No notices matching your query were found."
+            total_duration_ms = (time.time() - start_time) * 1000
+            direct_notice_res["timings"] = {
+                "total_ms": round(total_duration_ms, 1),
+                "retrieval_ms": 0.0,
+                "llm_ms": 0.0,
+                "verification_ms": 0.0
+            }
+            print(f"[DEBUG TIMING] Notices Router (Direct) | Total: {total_duration_ms:.1f}ms")
+            return direct_notice_res
 
         # Step 2: Follow-up memory / query rewriting
         effective_query, was_rewritten = rewrite_query(query, history, getattr(self, "client", None))
@@ -602,10 +1054,21 @@ Answer:"""
                 faculty_res["rewritten_query"] = effective_query
             return faculty_res
 
-        from src.reliability import (
-            ResponseType, AmbiguityDetector, AnswerVerifier, 
-            SensitiveInfoFilter, ResponseFormatter
-        )
+        # 0b. Check Notices on search query (Deterministic code routing, NO LLM)
+        notice_res = handle_notices_query(search_query, self.db)
+        if notice_res is not None:
+            total_duration_ms = (time.time() - start_time) * 1000
+            notice_res["timings"] = {
+                "total_ms": round(total_duration_ms, 1),
+                "retrieval_ms": 0.0,
+                "llm_ms": 0.0,
+                "verification_ms": 0.0
+            }
+            if was_rewritten:
+                notice_res["rewritten_query"] = effective_query
+            print(f"[DEBUG TIMING] Notices Router (Rewritten) | Total: {total_duration_ms:.1f}ms")
+            self.db.set_cached_answer(cache_key, notice_res)
+            return notice_res
 
         # Step 3: Check Study Mode (general academic help)
         if study_mode and not is_gprec_fact_query(search_query):
@@ -636,12 +1099,16 @@ Answer:"""
                             contents=study_prompt,
                             config=types.GenerateContentConfig(temperature=0.2, max_output_tokens=700)
                         )
-                        explanation_text = (response.text or "").strip()
                 except Exception:
                     explanation_text = f"Academic explanation for: {search_query}"
             else:
                 explanation_text = f"Academic explanation for: {search_query}"
             llm_duration_ms = (time.time() - t_llm_start) * 1000
+
+            if has_instruction_echo(explanation_text):
+                increment_instruction_leak_count()
+                logger.warning("Instruction leak detected in study mode (count=%d). Returning safe fallback.", get_instruction_leak_count())
+                explanation_text = "Please refer to the course syllabus and official college academic guidelines."
 
             answer_body = f"General academic explanation, not from GPREC documents.\n\n{explanation_text}"
             total_duration_ms = (time.time() - start_time) * 1000
@@ -677,7 +1144,7 @@ Answer:"""
                 "clarify_question": ambiguity["question"],
                 "clarify_options": ambiguity["options"],
                 "sources": [],
-                "confidence": "High",
+                "confidence": "Medium",
                 "confidence_reason": "Identified query ambiguity needing department clarification",
                 "timings": {
                     "total_ms": round(total_duration_ms, 1),
@@ -694,179 +1161,14 @@ Answer:"""
         matched_facts = self.db.get_matching_verified_facts(search_query)
         
         # 2. Check if question is specifically about deadlines, timetables, results, or latest notices
-        q_lower = search_query.lower()
-        is_deadline_query = any(k in q_lower for k in [
-            "deadline", "deadlines", "last date", "due date", "closing date", "on or before"
-        ])
-        is_timetable_query = any(k in q_lower for k in [
-            "timetable", "time table", "exam schedule", "examination schedule", "exam dates", "dates of exam"
-        ])
-        is_result_query = any(k in q_lower for k in [
-            "result", "results", "grade card", "marks memo", "revaluation", "recounting"
-        ])
-        is_latest_notice_query = any(k in q_lower for k in [
-            "latest notice", "latest notices", "recent notice", "recent notices", "new notice",
-            "new notices", "exam notice", "exam notices", "latest notification", "recent notification",
-            "latest circular", "recent circular"
-        ]) or (
-            any(w in q_lower for w in ["latest", "recent", "new", "current"]) and
-            any(t in q_lower for t in ["notice", "circular", "notification"])
-        )
-
-        is_notice_category_query = (
-            is_deadline_query or is_timetable_query or is_result_query or is_latest_notice_query
-        )
-
-        if is_notice_category_query:
-            # Query the notices table directly, sorted by published_date DESC
-            matched_notices = []
-            if is_deadline_query:
-                with self.db.get_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        SELECT * FROM notices
-                        WHERE is_active = 1 AND (
-                            deadline_date IS NOT NULL OR
-                            LOWER(raw_text) LIKE '%last date%' OR
-                            LOWER(raw_text) LIKE '%on or before%' OR
-                            LOWER(raw_text) LIKE '%due%' OR
-                            LOWER(notice_type) IN ('fee notification', 'revaluation')
-                        )
-                        ORDER BY CASE WHEN deadline_date IS NOT NULL AND deadline_date != '' THEN deadline_date ELSE '9999-12-31' END ASC,
-                                 CASE WHEN published_date IS NOT NULL AND published_date != '' THEN published_date ELSE '1970-01-01' END DESC
-                        LIMIT 10
-                    """)
-                    matched_notices = [dict(row) for row in cursor.fetchall()]
-            elif is_timetable_query:
-                with self.db.get_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        SELECT * FROM notices
-                        WHERE is_active = 1 AND (
-                            LOWER(notice_type) = 'timetable' OR
-                            LOWER(title) LIKE '%timetable%' OR
-                            LOWER(title) LIKE '%time table%' OR
-                            LOWER(raw_text) LIKE '%timetable%' OR
-                            LOWER(raw_text) LIKE '%time table%'
-                        )
-                        ORDER BY CASE WHEN published_date IS NOT NULL AND published_date != '' THEN published_date ELSE '1970-01-01' END DESC,
-                                 notice_id DESC
-                        LIMIT 10
-                    """)
-                    matched_notices = [dict(row) for row in cursor.fetchall()]
-            elif is_result_query:
-                with self.db.get_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        SELECT * FROM notices
-                        WHERE is_active = 1 AND (
-                            LOWER(notice_type) IN ('results', 'revaluation') OR
-                            LOWER(title) LIKE '%result%' OR
-                            LOWER(title) LIKE '%revaluation%' OR
-                            LOWER(raw_text) LIKE '%result%' OR
-                            LOWER(raw_text) LIKE '%revaluation%'
-                        )
-                        ORDER BY CASE WHEN published_date IS NOT NULL AND published_date != '' THEN published_date ELSE '1970-01-01' END DESC,
-                                 notice_id DESC
-                        LIMIT 10
-                    """)
-                    matched_notices = [dict(row) for row in cursor.fetchall()]
-            else: # is_latest_notice_query
-                with self.db.get_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        SELECT * FROM notices
-                        WHERE is_active = 1
-                        ORDER BY CASE WHEN published_date IS NOT NULL AND published_date != '' THEN published_date ELSE '1970-01-01' END DESC,
-                                 notice_id DESC
-                        LIMIT 10
-                    """)
-                    matched_notices = [dict(row) for row in cursor.fetchall()]
-
-            # If user query specified specific topic/branch/program, filter matched_notices
-            if matched_notices:
-                # Check programs
-                prog_terms = ["b.tech", "m.tech", "mba", "mca"]
-                for pt in prog_terms:
-                    if pt in q_lower:
-                        filtered = [n for n in matched_notices if pt in (n.get("title", "") + " " + n.get("raw_text", "") + " " + str(n.get("program", ""))).lower()]
-                        if filtered:
-                            matched_notices = filtered
-                        break
-
-                # Check topic terms (e.g. "revaluation", "marine", "hostel", "cse", "eee")
-                query_words = set(re.findall(r'\b[a-zA-Z]{3,}\b', q_lower))
-                generic_words = {
-                    "what", "when", "where", "which", "who", "whom", "whose", "why", "how",
-                    "latest", "recent", "current", "upcoming", "new", "list", "show", "tell",
-                    "give", "details", "info", "information", "notice", "notices", "circular",
-                    "circulars", "notification", "notifications", "exam", "exams", "examination",
-                    "examinations", "dates", "date", "schedule", "timetable", "the", "for", "and",
-                    "are", "with", "from", "any", "all", "about", "there"
-                }
-                topic_keywords = query_words - generic_words
-                if topic_keywords:
-                    filtered_topic = [
-                        n for n in matched_notices
-                        if any(tk in (n.get("title", "") + " " + n.get("raw_text", "") + " " + (n.get("department") or "")).lower() for tk in topic_keywords)
-                    ]
-                    matched_notices = filtered_topic
-
-            # If nothing matches, return NOT_FOUND instead of falling back to old chunks
-            if not matched_notices:
-                return ResponseFormatter.format_not_found([
-                    "Check official notifications at examcell.gprec.ac.in",
-                    "Check the physical notice board at the examination cell",
-                    "Contact the Controller of Examinations (COE)"
-                ])
-
-            # Build direct answer from the notices table
-            top_notice = matched_notices[0]
-            pub_date = top_notice.get("published_date")
-            date_str = pub_date[:10] if pub_date else None
-            date_prefix = f"Based on the notice dated **{date_str}**" if date_str else "Based on the official notice"
-
-            if is_deadline_query:
-                deadline_val = top_notice.get("deadline_date") or "as specified in the circular"
-                answer = f"{date_prefix}, the deadline for **{top_notice['title']}** is **{deadline_val}**."
-                if len(matched_notices) > 1 and matched_notices[1].get("deadline_date"):
-                    answer += f" Additionally, the deadline for **{matched_notices[1]['title']}** is **{matched_notices[1]['deadline_date']}**."
-            elif any(w in q_lower for w in ["list", "what are", "all"]) or len(matched_notices) > 1 and is_latest_notice_query:
-                bullets = []
-                for n in matched_notices[:5]:
-                    n_date = n.get("published_date")
-                    d_txt = f" (Published: {n_date[:10]})" if n_date else ""
-                    bullets.append(f"* **{n['title']}**{d_txt}")
-                answer = f"{date_prefix}, the latest updates are:\n\n" + "\n".join(bullets)
-            else:
-                answer = f"{date_prefix}, **{top_notice['title']}** has been published."
-                if top_notice.get("deadline_date"):
-                    answer += f" The last date is **{top_notice['deadline_date']}**."
-
-            sources = []
-            for n in matched_notices[:5]:
-                doc_url = n.get("document_url") or (n.get("attachment_urls") or "").split(",")[0] or n.get("source_page") or "https://www.gprec.ac.in"
-                sources.append({
-                    "title": f"Notice: {n['title']}",
-                    "source_url": doc_url,
-                    "page": None,
-                    "published_date": n.get("published_date")
-                })
-
+        notice_res = handle_notices_query(search_query, self.db)
+        if notice_res is not None:
             total_duration_ms = (time.time() - start_time) * 1000
-            print(f"[DEBUG TIMING] Notice Match | Total: {total_duration_ms:.1f}ms")
-            notice_res = {
-                "response_type": ResponseType.ANSWERED,
-                "answer": clean_answer(answer),
-                "sources": sources,
-                "confidence": "High",
-                "confidence_reason": f"Official notice dated {date_str or 'verified'}",
-                "timings": {
-                    "total_ms": round(total_duration_ms, 1),
-                    "retrieval_ms": round(total_duration_ms, 1),
-                    "llm_ms": 0.0,
-                    "verification_ms": 0.0
-                }
+            notice_res["timings"] = {
+                "total_ms": round(total_duration_ms, 1),
+                "retrieval_ms": 0.0,
+                "llm_ms": 0.0,
+                "verification_ms": 0.0
             }
             if was_rewritten:
                 notice_res["rewritten_query"] = effective_query
@@ -972,15 +1274,41 @@ Answer:"""
         if matched_notices:
             all_context_text += " " + " ".join([f"{n.get('title', '')} {n.get('raw_text', '')}" for n in matched_notices])
 
-        prompt = self.generate_prompt(
-            search_query, contexts, 
-            verified_facts=matched_facts, 
-            entity_directory=matched_entities,
-            notices=matched_notices,
-            curated_links=curated_links
-        )
+        # Resolve prompt generation safely (supports fresh instances, class fallback, and legacy callers)
+        gen_prompts_fn = getattr(self, "generate_prompts", None) or getattr(RAGPipeline, "generate_prompts", None)
+        if gen_prompts_fn is not None:
+            if hasattr(self, "generate_prompts"):
+                system_prompt, user_prompt = self.generate_prompts(
+                    search_query, contexts, 
+                    verified_facts=matched_facts, 
+                    entity_directory=matched_entities,
+                    notices=matched_notices,
+                    curated_links=curated_links
+                )
+            else:
+                system_prompt, user_prompt = RAGPipeline.generate_prompts(
+                    self, search_query, contexts, 
+                    verified_facts=matched_facts, 
+                    entity_directory=matched_entities,
+                    notices=matched_notices,
+                    curated_links=curated_links
+                )
+        else:
+            gen_p = getattr(self, "generate_prompt", None) or getattr(RAGPipeline, "generate_prompt", None)
+            if gen_p is not None:
+                prompt = self.generate_prompt(
+                    search_query, contexts, 
+                    verified_facts=matched_facts, 
+                    entity_directory=matched_entities,
+                    notices=matched_notices,
+                    curated_links=curated_links
+                )
+            else:
+                prompt = f"Context: {contexts}\n\nQuestion: {search_query}"
+            system_prompt = "You are the GPREC AI Student Assistant, an official conversational chatbot for G. Pulla Reddy Engineering College (GPREC), Kurnool."
+            user_prompt = prompt
         
-        # LLM Call (Speed settings: 20s timeout, max 1 retry, no OpenRouter fallback loop)
+        # LLM Call (Speed settings: 20s timeout, max 1 retry, separated system/user messages)
         t_llm_start = time.time()
         max_retries = 2
         answer_text = ""
@@ -991,30 +1319,70 @@ Answer:"""
                 if config.LLM_PROVIDER == "openrouter":
                     response = self.client.chat.completions.create(
                         model=model_to_use,
-                        messages=[{"role": "user", "content": prompt}],
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
                         temperature=0.0,
                         timeout=20.0,
-                        max_tokens=600
+                        max_tokens=1000
                     )
-                    answer_text = (response.choices[0].message.content or "").strip()
+                    raw_answer = (response.choices[0].message.content or "").strip()
                 else:
                     response = self.client.models.generate_content(
                         model=model_to_use,
-                        contents=prompt,
-                        config=types.GenerateContentConfig(temperature=0.0, max_output_tokens=600)
+                        contents=user_prompt,
+                        config=types.GenerateContentConfig(
+                            temperature=0.0, 
+                            max_output_tokens=1000,
+                            system_instruction=system_prompt
+                        )
                     )
-                    answer_text = (response.text or "").strip()
+                    raw_answer = (response.text or "").strip()
                     
+                # Guard: Check for instruction-echo markers in raw response
+                if has_instruction_echo(raw_answer):
+                    increment_instruction_leak_count()
+                    logger.warning("Instruction leak detected (count=%d). Discarding response and retrying with shorter prompt.", get_instruction_leak_count())
+                    if attempt < max_retries - 1:
+                        system_prompt = "You are the GPREC AI Student Assistant. Answer the question directly and concisely in 1-2 sentences using only the provided context. Do NOT include rules, analysis, or internal thinking."
+                        user_prompt = f"Context:\n{all_context_text[:1200]}\n\nQuestion: {search_query}\nAnswer:"
+                        time.sleep(0.5)
+                        continue
+                    else:
+                        logger.warning("Instruction leak repeated on retry (count=%d). Returning safe fallback.", get_instruction_leak_count())
+                        answer_text = SAFE_FALLBACK_TEXT
+                        break
+
+                cleaned_candidate = clean_answer(raw_answer)
+
+                # Guard: Check for instruction-echo markers in cleaned candidate
+                if has_instruction_echo(cleaned_candidate):
+                    increment_instruction_leak_count()
+                    logger.warning("Instruction leak detected in cleaned candidate (count=%d).", get_instruction_leak_count())
+                    if attempt < max_retries - 1:
+                        system_prompt = "You are the GPREC AI Student Assistant. Answer the question directly and concisely in 1-2 sentences using only the provided context. Do NOT include rules, analysis, or internal thinking."
+                        user_prompt = f"Context:\n{all_context_text[:1200]}\n\nQuestion: {search_query}\nAnswer:"
+                        time.sleep(0.5)
+                        continue
+                    else:
+                        logger.warning("Instruction leak repeated on retry (count=%d). Returning safe fallback.", get_instruction_leak_count())
+                        answer_text = SAFE_FALLBACK_TEXT
+                        break
+
                 is_invalid = (
-                    not answer_text
-                    or answer_text.lower().startswith("user safety")
-                    or (len(answer_text) < 25 and "safe" in answer_text.lower())
+                    not cleaned_candidate
+                    or is_pure_reasoning_scratchpad(cleaned_candidate)
+                    or cleaned_candidate.lower().startswith("user safety")
+                    or (len(cleaned_candidate) < 20 and "safe" in cleaned_candidate.lower())
                 )
                 if is_invalid and attempt < max_retries - 1:
                     time.sleep(1)
                     continue
                 elif is_invalid:
                     answer_text = ""
+                else:
+                    answer_text = cleaned_candidate
                 break
             except Exception as e:
                 error_msg = str(e).lower()
@@ -1028,6 +1396,26 @@ Answer:"""
 
         # If after retries output is still empty, fall back cleanly
         if not answer_text:
+            if curated_links:
+                links_md = format_curated_links_markdown(curated_links)
+                if any(w in search_query.lower() for w in ["fee", "fees", "tuition"]):
+                    fb_text = f"The tuition fee for B.Tech programmes is subject to revision by the Government of Andhra Pradesh for the academic year 2026–27. You can access the official GPREC document/portal directly using the link(s) below:\n\n{links_md}"
+                else:
+                    fb_text = f"You can access the official GPREC document/portal directly using the link(s) below:\n\n{links_md}"
+                total_duration_ms = (time.time() - start_time) * 1000
+                return {
+                    "response_type": ResponseType.ANSWERED,
+                    "answer": fb_text,
+                    "sources": all_sources,
+                    "confidence": "High",
+                    "confidence_reason": "Official GPREC document/portal links",
+                    "timings": {
+                        "total_ms": round(total_duration_ms, 1),
+                        "retrieval_ms": round(retrieval_duration_ms, 1),
+                        "llm_ms": round(llm_duration_ms, 1),
+                        "verification_ms": 0.0
+                    }
+                }
             nf_res = ResponseFormatter.format_not_found()
             total_duration_ms = (time.time() - start_time) * 1000
             nf_res["timings"] = {
@@ -1050,7 +1438,11 @@ Answer:"""
 
         # 3. Clean Response Type Categorization
         # Clean answer text immediately from citation markers, headers, and openers
-        final_answer = clean_answer(answer_text)
+        if answer_text == SAFE_FALLBACK_TEXT:
+            final_answer = SAFE_FALLBACK_TEXT
+            response_type = ResponseType.ANSWERED
+        else:
+            final_answer = clean_answer(answer_text)
         not_found_phrase = "I couldn't find this information in the available official GPREC sources"
         if not_found_phrase in final_answer:
             parts = final_answer.split(not_found_phrase)
@@ -1089,34 +1481,20 @@ Answer:"""
                     response_type = ResponseType.ANSWERED
 
         # 4. Post-Processing & Sensitive Info Filter
-        if response_type in (ResponseType.ANSWERED, ResponseType.PARTIAL):
-            final_answer = clean_answer(final_answer)
         final_answer = SensitiveInfoFilter.scrub(final_answer)
 
         # 5. Calibrate Confidence
-        top_score = contexts[0].get("score", 0.0) if contexts else 1.0
-        if curated_links and response_type == ResponseType.ANSWERED:
-            confidence = "High"
-            confidence_reason = "Authoritative official GPREC document/portal link"
-        elif matched_facts and response_type == ResponseType.ANSWERED:
-            v_date = matched_facts[0].get("verified_date") or "2026-10-12"
-            confidence = "High"
-            confidence_reason = f"Verified by admin on {v_date}"
-        elif matched_entities and response_type == ResponseType.ANSWERED:
-            confidence = "High"
-            confidence_reason = f"Verified from official entity directory ({matched_entities[0].get('role')})"
-        elif matched_notices and response_type == ResponseType.ANSWERED:
-            confidence = "High"
-            confidence_reason = "Grounded in official structured notices and timetables"
-        elif top_score > 0.38 and verification_passed and response_type == ResponseType.ANSWERED:
-            confidence = "High"
-            confidence_reason = "Strong relevance score and verified against official documents"
-        elif response_type == ResponseType.PARTIAL or not verification_passed:
-            confidence = "Medium"
-            confidence_reason = "Partial context available; unconfirmed details omitted"
+        if final_answer == SAFE_FALLBACK_TEXT:
+            confidence = "Low"
+            confidence_reason = "Safe fallback due to repeated instruction leak"
         else:
-            confidence = "Medium" if top_score > 0.25 else "Low"
-            confidence_reason = "Standard keyword and semantic match"
+            confidence, confidence_reason = compute_confidence(
+                response_type=response_type,
+                answer_text=final_answer,
+                contexts=contexts,
+                is_structured_table=bool(matched_facts or matched_entities or matched_notices),
+                verification_passed=verification_passed
+            )
 
         total_duration_ms = (time.time() - start_time) * 1000
         timings = {
@@ -1140,7 +1518,8 @@ Answer:"""
 
         # Cache valid answers in SQLite (24-hour expiry, exclude NOT_FOUND and CLARIFY)
         if response_type in (ResponseType.ANSWERED, ResponseType.PARTIAL):
-            self.db.set_cached_answer(cache_key, result)
+            if final_answer and not is_pure_reasoning_scratchpad(final_answer):
+                self.db.set_cached_answer(cache_key, result)
 
         return result
 
@@ -1209,13 +1588,39 @@ Answer:"""
                 "published_date": c.get("published_date")
             })
 
-        prompt = self.generate_prompt(
-            query, contexts, 
-            verified_facts=matched_facts,
-            entity_directory=matched_entities,
-            notices=matched_notices,
-            curated_links=curated_links
-        )
+        # Resolve prompt generation safely (supports fresh instances, class fallback, and legacy callers)
+        gen_prompts_fn = getattr(self, "generate_prompts", None) or getattr(RAGPipeline, "generate_prompts", None)
+        if gen_prompts_fn is not None:
+            if hasattr(self, "generate_prompts"):
+                system_prompt, user_prompt = self.generate_prompts(
+                    query, contexts, 
+                    verified_facts=matched_facts,
+                    entity_directory=matched_entities,
+                    notices=matched_notices,
+                    curated_links=curated_links
+                )
+            else:
+                system_prompt, user_prompt = RAGPipeline.generate_prompts(
+                    self, query, contexts, 
+                    verified_facts=matched_facts, 
+                    entity_directory=matched_entities,
+                    notices=matched_notices,
+                    curated_links=curated_links
+                )
+        else:
+            gen_p = getattr(self, "generate_prompt", None) or getattr(RAGPipeline, "generate_prompt", None)
+            if gen_p is not None:
+                prompt = self.generate_prompt(
+                    query, contexts, 
+                    verified_facts=matched_facts,
+                    entity_directory=matched_entities,
+                    notices=matched_notices,
+                    curated_links=curated_links
+                )
+            else:
+                prompt = f"Context: {contexts}\n\nQuestion: {query}"
+            system_prompt = "You are the GPREC AI Student Assistant, an official conversational chatbot for G. Pulla Reddy Engineering College (GPREC), Kurnool."
+            user_prompt = prompt
         
         if not self.client:
             def dummy_stream():
@@ -1238,7 +1643,10 @@ Answer:"""
                 if config.LLM_PROVIDER == "openrouter":
                     response_stream = self.client.chat.completions.create(
                         model=config.OPENROUTER_MODEL,
-                        messages=[{"role": "user", "content": prompt}],
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
                         temperature=0.0,
                         stream=True
                     )
@@ -1248,8 +1656,11 @@ Answer:"""
                 else:
                     response_stream = self.client.models.generate_content_stream(
                         model=config.GEMINI_MODEL,
-                        contents=prompt,
-                        config=types.GenerateContentConfig(temperature=0.0)
+                        contents=user_prompt,
+                        config=types.GenerateContentConfig(
+                            temperature=0.0,
+                            system_instruction=system_prompt
+                        )
                     )
                     for chunk in response_stream:
                         if chunk.text:
@@ -1278,7 +1689,10 @@ Answer:"""
                     try:
                         response_stream = or_client.chat.completions.create(
                             model=model_id,
-                            messages=[{"role": "user", "content": prompt}],
+                            messages=[
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": user_prompt}
+                            ],
                             temperature=0.0,
                             stream=True
                         )

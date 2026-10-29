@@ -5,6 +5,16 @@ from dotenv import load_dotenv
 # Load environment variables from .env if present
 load_dotenv(override=True)
 
+# Also sync Streamlit cloud secrets into os.environ if running on Streamlit Cloud
+try:
+    import streamlit as st
+    if hasattr(st, "secrets"):
+        for k, v in st.secrets.items():
+            if isinstance(v, str) and k not in os.environ:
+                os.environ[k] = v
+except Exception:
+    pass
+
 # Base paths
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
@@ -78,6 +88,9 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openrouter")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 LLM_MODEL = os.getenv("LLM_MODEL") or os.getenv("OPENROUTER_MODEL", "google/gemma-2-9b-it:free")
 OPENROUTER_MODEL = LLM_MODEL
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 
 # Important pages coverage configuration (Pages that must be indexed)
 IMPORTANT_PAGES = [

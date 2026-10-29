@@ -5,19 +5,177 @@ import json
 import re
 from datetime import datetime
 
-def load_css(file_path="ui/style.css"):
-    try:
-        with open(file_path, "r") as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-    except FileNotFoundError:
-        pass
+from src.subject_assistant import (
+    VERIFICATION_LINE,
+    PRACTICE_DISCLAIMER,
+    split_topics,
+    get_subject_cache_key,
+    generate_example_doubts,
+    build_topic_explanation_prompt,
+    build_practice_prompt,
+    build_quick_revision_prompt,
+    call_subject_llm,
+    answer_subject_doubt,
+    clean_subject_response
+)
+from src.curated_links import (
+    get_branch_latest_syllabus_pdf,
+    get_branch_latest_syllabus_info,
+    get_all_latest_syllabus_links_for_branch,
+    is_cross_branch_url
+)
 
-def get_base64_of_bin_file(bin_file):
-    if os.path.exists(bin_file):
-        with open(bin_file, 'rb') as f:
-            data = f.read()
-        return base64.b64encode(data).decode()
+@st.cache_data
+def get_cached_css(file_path: str = "ui/style.css") -> str:
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            return f"<style>{f.read()}</style>"
+    except FileNotFoundError:
+        return ""
+
+def load_css(file_path="ui/style.css"):
+    css_content = get_cached_css(file_path)
+    if css_content:
+        st.markdown(css_content, unsafe_allow_html=True)
+
+@st.cache_data(max_entries=600)
+def get_base64_of_bin_file(bin_file: str) -> str:
+    if bin_file and os.path.exists(bin_file):
+        try:
+            with open(bin_file, 'rb') as f:
+                data = f.read()
+            return base64.b64encode(data).decode()
+        except Exception:
+            return ""
     return ""
+
+@st.cache_data(ttl=300)
+def get_cached_departments_with_faculty(_db):
+    return _db.get_all_departments_with_faculty()
+
+@st.cache_data(ttl=300)
+def get_cached_faculty(_db, department=None, search=None, is_guest=None, is_hod=None):
+    return _db.get_faculty(
+        department=department,
+        search=search,
+        is_guest=is_guest,
+        is_hod=is_hod,
+        is_active=1
+    )
+
+@st.cache_data(ttl=300)
+def get_cached_notices(_db, notice_type=None, program=None, semester=None, active_only=True, limit=50):
+    return _db.get_notices(
+        notice_type=notice_type,
+        program=program,
+        semester=semester,
+        active_only=active_only,
+        limit=limit
+    )
+
+@st.cache_data(ttl=300)
+def get_cached_latest_notice_date(_db):
+    notices = _db.get_notices(limit=1)
+    if notices and notices[0].get("published_date"):
+        return notices[0]["published_date"]
+    return None
+
+@st.cache_data(ttl=300)
+def get_cached_deadlines(_db):
+    deadlines = []
+    try:
+        with _db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT title, notice_type, published_date, attachment_urls, source_page, raw_text
+                FROM notices 
+                WHERE is_active = 1 AND (
+                    notice_type IN ('fee notification', 'revaluation') OR 
+                    raw_text LIKE '%last date%' OR 
+                    raw_text LIKE '%deadline%'
+                )
+                ORDER BY published_date DESC
+            """)
+            for row in cursor.fetchall():
+                deadlines.append(dict(row))
+    except Exception:
+        pass
+    return deadlines
+
+def _ensure_fresh_db(_db):
+    if _db is None or not hasattr(_db, "get_syllabus_schemes") or not hasattr(_db, "get_subject_assistance_subjects"):
+        try:
+            import importlib
+            import src.database
+            importlib.reload(src.database)
+            return src.database.DatabaseManager()
+        except Exception:
+            pass
+    return _db
+
+@st.cache_data(ttl=300)
+def get_cached_syllabus_branches(_db):
+    fresh_db = _ensure_fresh_db(_db)
+    if hasattr(fresh_db, "get_syllabus_branches"):
+        branches = fresh_db.get_syllabus_branches()
+        return [b for b in branches if b != "CST"]
+    from src.faculty_parser import DEPARTMENT_CONFIGS
+    return [d["short_code"] for d in DEPARTMENT_CONFIGS if d["short_code"] != "CST"]
+
+@st.cache_data(ttl=300)
+def get_cached_syllabus_schemes(_db, branch):
+    fresh_db = _ensure_fresh_db(_db)
+    if hasattr(fresh_db, "get_syllabus_schemes"):
+        return fresh_db.get_syllabus_schemes(branch)
+    return ["2023", "2020"]
+
+@st.cache_data(ttl=300)
+def get_cached_syllabus_semesters(_db, branch, scheme=None):
+    fresh_db = _ensure_fresh_db(_db)
+    if hasattr(fresh_db, "get_syllabus_semesters"):
+        return fresh_db.get_syllabus_semesters(branch, scheme)
+    return [1, 2, 3, 4, 5, 6, 7]
+
+@st.cache_data(ttl=300)
+def get_cached_syllabus_courses(_db, branch, semester, scheme=None):
+    fresh_db = _ensure_fresh_db(_db)
+    if hasattr(fresh_db, "get_syllabus_courses"):
+        return fresh_db.get_syllabus_courses(branch, semester, scheme=scheme)
+    return []
+
+@st.cache_data(ttl=300)
+def get_cached_subject_assistance_subjects(_db, branch, semester, scheme=None):
+    fresh_db = _ensure_fresh_db(_db)
+    if hasattr(fresh_db, "get_subject_assistance_subjects"):
+        return fresh_db.get_subject_assistance_subjects(branch, semester, scheme=scheme)
+    return []
+
+@st.cache_data(ttl=300)
+def get_cached_syllabus_units_for_course(_db, branch, semester, course_title, course_code=None):
+    fresh_db = _ensure_fresh_db(_db)
+    if hasattr(fresh_db, "get_syllabus_units_for_course"):
+        return fresh_db.get_syllabus_units_for_course(
+            branch=branch,
+            semester=semester,
+            course_title=course_title,
+            course_code=course_code
+        )
+    return []
+
+@st.cache_data(ttl=300)
+def get_cached_academics_subjects(_db, branch, semester):
+    try:
+        with _db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT course_code, course_title, unit_number, topics, outcomes "
+                "FROM syllabus WHERE (branch = ? OR (branch = 'COMMON' AND year = 1)) AND semester = ? "
+                "ORDER BY course_code, unit_number", 
+                (branch, semester)
+            )
+            return [dict(row) for row in cursor.fetchall()]
+    except Exception:
+        return []
 
 def format_date(date_str):
     if not date_str: return ""
@@ -30,11 +188,19 @@ def format_date(date_str):
     except Exception:
         return date_str
 
+def render_html_block(html_content: str):
+    """
+    Renders HTML safely in Streamlit without CommonMark treating 
+    indented lines or blank lines inside HTML as <pre><code> blocks.
+    """
+    clean_lines = [line.strip() for line in html_content.strip().splitlines() if line.strip()]
+    st.markdown(" ".join(clean_lines), unsafe_allow_html=True)
+
 def render_header():
     logo_base64 = get_base64_of_bin_file("gprec_logo1.png")
     img_html = f'<img src="data:image/png;base64,{logo_base64}" alt="GPREC Logo" class="college-logo">' if logo_base64 else ''
     
-    st.markdown(f"""
+    render_html_block(f"""
         <div class="main-header">
             {img_html}
             <div class="header-text">
@@ -43,11 +209,11 @@ def render_header():
                 <div class="badge-amber">Answers from official GPREC sources only</div>
             </div>
         </div>
-    """, unsafe_allow_html=True)
+    """)
 
-def render_loading_skeleton():
-    """Render a modern skeleton shimmer loading card with a smooth spinner."""
-    st.markdown("""
+def render_loading_skeleton(stage_text="Consulting official GPREC knowledge base & drafting response..."):
+    """Render a modern skeleton shimmer loading card with a smooth spinner and stage indication."""
+    render_html_block(f"""
         <div class="skeleton-card">
             <div class="skeleton-header">
                 <div class="skeleton-avatar skeleton-shimmer"></div>
@@ -63,32 +229,31 @@ def render_loading_skeleton():
             </div>
             <div class="skeleton-footer">
                 <span class="skeleton-spinner-ring"></span>
-                <span class="skeleton-footer-text">Consulting official GPREC knowledge base & drafting response...</span>
+                <span class="skeleton-footer-text">{stage_text}</span>
             </div>
         </div>
-    """, unsafe_allow_html=True)
+    """)
+
+def _handle_quick_question(question):
+    st.session_state.prompt_trigger = question
 
 def quick_question_button(label, question):
-    if st.button(label, use_container_width=True, key=f"btn_{label}"):
-        st.session_state.prompt_trigger = question
+    st.button(label, use_container_width=True, key=f"btn_{label}", on_click=_handle_quick_question, args=(question,))
 
 def render_welcome_state():
     st.markdown("### How can I help you today?")
     st.markdown("Select a topic below or ask your own question.")
     
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3 = st.columns(3)
     with c1:
         quick_question_button("🎓 Admissions", "What is the admission process for B.Tech?")
-        quick_question_button("💼 Placements", "What are the placement statistics for last year?")
+        quick_question_button("📖 Library Rules", "What are the library timings and borrowing rules?")
     with c2:
-        quick_question_button("📚 Departments", "What are the facilities in the CSE department?")
-        quick_question_button("📖 Library", "What are the library timings and borrowing rules?")
+        quick_question_button("💼 Placements", "What are the placement statistics for last year?")
+        quick_question_button("💰 Tuition Fee", "What is the tuition fee structure for B.Tech?")
     with c3:
-        quick_question_button("🏢 Hostel", "What are the rules and facilities of the college hostel?")
-        quick_question_button("📞 Contact", "How can I contact the college administration?")
-    with c4:
-        quick_question_button("📅 Notices", "What are the most recent notices?")
-        quick_question_button("📝 Exams", "When are the upcoming examinations?")
+        quick_question_button("🏛️ CSE Facilities", "What are the facilities in the CSE department?")
+        quick_question_button("📞 Contact Us", "How can I contact the college administration?")
 
 def render_source_card(sources, confidence, is_recent_query=False, debug_mode=False, confidence_reason=""):
     if not sources:
@@ -142,13 +307,18 @@ def render_source_card(sources, confidence, is_recent_query=False, debug_mode=Fa
     st.markdown("</div>", unsafe_allow_html=True)
 
 def render_not_found(suggested_questions=None):
-    st.markdown("""
+    render_html_block("""
         <div class="not-found-card" style="padding: 15px; border-left: 4px solid #f59e0b; background-color: #fffbeb; border-radius: 6px; margin-top: 10px; margin-bottom: 10px;">
             <h4 style="margin-top:0; color: #b45309; font-size:1.05rem;">Information Not Found</h4>
             <p style="margin-bottom:8px; color: #92400e; font-size:0.92rem;">I couldn't find this information in the available official GPREC sources. Please verify with the official notice board or the relevant department office.</p>
         </div>
-    """, unsafe_allow_html=True)
+    """)
     
+def _handle_not_found_click(sug):
+    st.session_state.prompt_trigger = sug
+
+def render_not_found(suggested_questions=None):
+    st.markdown("I couldn't find specific information about that in the official GPREC knowledge base.")
     suggestions = suggested_questions or [
         "What courses are offered at GPREC?",
         "What are the library timings and rules?",
@@ -158,57 +328,78 @@ def render_not_found(suggested_questions=None):
     cols = st.columns(len(suggestions))
     for idx, (col, sug) in enumerate(zip(cols, suggestions)):
         with col:
-            if st.button(sug, key=f"not_found_sug_{idx}_{sug[:10]}", use_container_width=True):
-                st.session_state.prompt_trigger = sug
-                st.rerun()
+            st.button(sug, key=f"not_found_sug_{idx}_{sug[:10]}", use_container_width=True, on_click=_handle_not_found_click, args=(sug,))
+
+def _handle_clarify_click(opt, question):
+    st.session_state.prompt_trigger = f"{opt} {question}"
 
 def render_clarify(question, options, key_prefix="clarify"):
-    st.markdown(f"""
+    render_html_block(f"""
         <div style="padding: 12px 16px; border-left: 4px solid #3b82f6; background-color: #eff6ff; border-radius: 6px; margin: 8px 0;">
             <b style="color: #1e40af;">{question}</b>
         </div>
-    """, unsafe_allow_html=True)
+    """)
     
     cols = st.columns(min(len(options), 6))
     for idx, opt in enumerate(options):
         col_idx = idx % len(cols)
         with cols[col_idx]:
-            if st.button(opt, key=f"{key_prefix}_{idx}_{opt}", use_container_width=True):
-                st.session_state.prompt_trigger = f"{opt} {question}"
-                st.rerun()
+            st.button(opt, key=f"{key_prefix}_{idx}_{opt}", use_container_width=True, on_click=_handle_clarify_click, args=(opt, question))
 
 
-def render_notices_page(db):
-    st.title("📅 Latest Notices & Examination Updates")
-    st.markdown("Official notices, exam timetables, fee circulars, and announcements from GPREC.")
-    
-    # Filter controls
-    c1, c2, c3 = st.columns(3)
+@st.fragment
+def render_notices_fragment(db):
+    latest_pub = get_cached_latest_notice_date(db)
+    pub_display = format_date(latest_pub) if latest_pub else "October 2026"
+    st.markdown(f"<div style='font-size:0.85rem; color:#64748b; margin-bottom:12px;'>📅 <b>Notice Board Last Checked:</b> {pub_display}</div>", unsafe_allow_html=True)
+
+    # Search and Filter controls
+    notice_search = st.text_input("🔍 Search notices", placeholder="Search notices by keyword, exam type, fee, circular...", key="notices_search_kw")
+
+    c1, c2, c3, c4 = st.columns([1.2, 1, 1, 1])
     with c1:
-        type_options = ["All", "timetable", "seating plan", "results", "revaluation", "hall ticket", "fee notification", "circular", "event"]
-        selected_type = st.selectbox("Filter by Type", type_options, format_func=lambda x: x.title())
+        dept_options = ["All", "General", "CSE", "ECE", "EEE", "CE", "ME", "CSM", "CSD", "CSB", "H&S"]
+        selected_dept = st.selectbox("Department", dept_options, key="notices_filter_dept")
     with c2:
-        prog_options = ["All", "B.Tech", "M.Tech", "MBA", "MCA"]
-        selected_prog = st.selectbox("Filter by Program", prog_options)
+        type_options = ["All", "timetable", "seating plan", "results", "revaluation", "hall ticket", "fee notification", "circular", "event"]
+        selected_type = st.selectbox("Type", type_options, format_func=lambda x: x.title(), key="notices_filter_type")
     with c3:
+        prog_options = ["All", "B.Tech", "M.Tech", "MBA", "MCA"]
+        selected_prog = st.selectbox("Program", prog_options, key="notices_filter_prog")
+    with c4:
         sem_options = ["All", "I Sem", "II Sem", "III Sem", "IV Sem", "V Sem", "VI Sem", "VII Sem", "VIII Sem"]
-        selected_sem = st.selectbox("Filter by Semester", sem_options)
+        selected_sem = st.selectbox("Semester", sem_options, key="notices_filter_sem")
 
-    # Fetch notices from structured notices table
-    notices = db.get_notices(
+    # Fetch notices from structured notices table using cached query
+    notices = get_cached_notices(
+        db,
         notice_type=selected_type if selected_type != "All" else None,
         program=selected_prog if selected_prog != "All" else None,
         semester=selected_sem if selected_sem != "All" else None,
         active_only=True,
         limit=50
     )
+
+    # Apply department filter if not All
+    if selected_dept != "All":
+        notices = [n for n in notices if (n.get("department") or "General").upper() == selected_dept.upper()]
+
+    # Apply keyword search filter if provided
+    if notice_search and notice_search.strip():
+        q_lower = notice_search.strip().lower()
+        notices = [
+            n for n in notices
+            if q_lower in (n.get("title") or "").lower()
+            or q_lower in (n.get("raw_text") or "").lower()
+            or q_lower in (n.get("department") or "").lower()
+            or q_lower in (n.get("notice_type") or "").lower()
+        ]
     
-    # Check if newest notice is >30 days old
-    all_notices = db.get_notices(limit=1)
-    if all_notices and all_notices[0].get("published_date"):
+    # Check if newest notice is >30 days old using cached query
+    if latest_pub:
         try:
             from datetime import datetime
-            latest_dt = datetime.strptime(all_notices[0]["published_date"][:10], "%Y-%m-%d")
+            latest_dt = datetime.strptime(latest_pub[:10], "%Y-%m-%d")
             days_old = (datetime.now() - latest_dt).days
             if days_old > 30:
                 st.warning(f"⚠️ **Notice Board Notice:** The latest archived notice is {days_old} days old. Please consult the physical college notice board or [examcell.gprec.ac.in](http://examcell.gprec.ac.in/) for live announcements.")
@@ -216,11 +407,10 @@ def render_notices_page(db):
             pass
 
     if not notices:
-        st.info("No notices found matching the selected filters. Please adjust the filters or check back later.")
+        st.info("No notices found matching the selected filters. Please adjust the filters or search query.")
         return
 
     st.caption(f"Showing {len(notices)} notices (latest first):")
-    st.divider()
 
     type_colors = {
         "timetable": "#2563eb",
@@ -256,7 +446,7 @@ def render_notices_page(db):
         raw_text = notice.get("raw_text") or ""
         badge_color = type_colors.get(ntype.lower(), "#4b5563")
 
-        with st.container():
+        with st.container(border=True):
             st.markdown(f"#### {title}")
             
             # Tags row: Department tag, Notice type tag, Program/Semester tags, Date, Deadline
@@ -283,35 +473,23 @@ def render_notices_page(db):
             # 'Open document' button using st.link_button. Never show raw URLs as text.
             if doc_url:
                 st.link_button("📄 Open document", doc_url, key=f"notice_btn_{notice.get('notice_id', idx)}")
-                        
-            st.divider()
+
+def render_notices_page(db):
+    st.title("📅 Latest Notices & Examination Updates")
+    st.markdown("Official notices, exam timetables, fee circulars, and announcements from GPREC.")
+    render_notices_fragment(db)
 
 def render_deadlines_page(pipeline, db=None):
     st.title("⏳ Deadlines & Important Dates")
     st.markdown("Upcoming examination fee deadlines, revaluation last dates, and academic schedule deadlines.")
     
+    st.markdown("<div style='font-size:0.85rem; color:#64748b; margin-bottom:12px;'>📅 <b>Deadlines Last Synchronized:</b> October 2026</div>", unsafe_allow_html=True)
+
     # Collect deadlines from both database notices and pipeline metadata
     deadlines = []
     
     if db is not None:
-        try:
-            # Query notices that contain deadlines or dates
-            with db.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT title, notice_type, published_date, attachment_urls, source_page, raw_text
-                    FROM notices 
-                    WHERE is_active = 1 AND (
-                        notice_type IN ('fee notification', 'revaluation') OR 
-                        raw_text LIKE '%last date%' OR 
-                        raw_text LIKE '%deadline%'
-                    )
-                    ORDER BY published_date DESC
-                """)
-                for row in cursor.fetchall():
-                    deadlines.append(dict(row))
-        except Exception:
-            pass
+        deadlines = get_cached_deadlines(db)
 
     if not deadlines and pipeline:
         deadlines = [m for m in pipeline.vstore.metadata if m.get("category") == "Deadlines"]
@@ -320,7 +498,21 @@ def render_deadlines_page(pipeline, db=None):
         st.info("No upcoming deadlines found in the knowledge base. Please check official notifications.")
         return
         
-    for item in deadlines:
+    dl_search_kw = st.text_input("🔍 Search deadlines", placeholder="Search by exam fee, revaluation, semester...", key="deadlines_search_input")
+    dl_dept = st.selectbox("Filter by Department", ["All", "General", "CSE", "ECE", "EEE", "CE", "ME", "CSM", "CSD", "CSB"], key="deadlines_dept_select")
+
+    if dl_dept != "All":
+        deadlines = [d for d in deadlines if (d.get("department") or "General").upper() == dl_dept.upper()]
+
+    if dl_search_kw and dl_search_kw.strip():
+        q_l = dl_search_kw.strip().lower()
+        deadlines = [d for d in deadlines if q_l in (d.get("title") or "").lower() or q_l in (d.get("raw_text") or "").lower()]
+
+    if not deadlines:
+        st.info("No deadlines match your filter criteria.")
+        return
+
+    for idx, item in enumerate(deadlines):
         title = item.get("title", "Important Deadline")
         pub_date = item.get("published_date", "")
         formatted_pub = format_date(pub_date)
@@ -344,8 +536,8 @@ def render_deadlines_page(pipeline, db=None):
             except Exception:
                 pass
 
-        with st.container():
-            st.markdown(f"**[{title}]({att_url})**")
+        with st.container(border=True):
+            st.markdown(f"#### {title}")
             meta_line = ""
             if formatted_pub:
                 meta_line += f"Published: {formatted_pub}  "
@@ -355,45 +547,53 @@ def render_deadlines_page(pipeline, db=None):
                 st.markdown(meta_line, unsafe_allow_html=True)
             if raw_text and raw_text != title:
                 st.caption(raw_text[:180] + ('...' if len(raw_text) > 180 else ''))
-            st.divider()
+            if att_url and att_url != "#":
+                st.link_button("📄 Open document", att_url, key=f"dl_open_btn_{idx}")
+
+def _handle_topic_question(q):
+    st.session_state.prompt_trigger = q
+    st.session_state.page = "Ask AI"
+    st.session_state.nav_radio = "Ask AI"
 
 def render_topic_page(title, intro, questions):
     st.title(title)
     st.markdown(intro)
     st.markdown("#### Ask a quick question:")
     for q in questions:
-        if st.button(q, use_container_width=True, key=f"topic_{title}_{q}"):
-            st.session_state.prompt_trigger = q
-            st.session_state.page = "Ask AI"
-            st.rerun()
+        st.button(q, use_container_width=True, key=f"topic_{title}_{q}", on_click=_handle_topic_question, args=(q,))
 
 def render_academics_page(db):
     st.title("📚 Academics")
-    st.markdown("View syllabus and subjects for your branch and semester.")
+    st.markdown("View official syllabus scheme documents and course details for your branch and semester.")
     
     col1, col2 = st.columns(2)
     with col1:
-        branch = st.selectbox("Select Branch", ["CSE", "ECE", "EEE", "CE", "ME", "CST", "CSM", "CSB"])
+        branch = st.selectbox("Select Branch", ["CSE", "ECE", "EEE", "CE", "ME", "CSM", "CSD", "CSB"])
     with col2:
         semester = st.selectbox("Select Semester", ["1", "2", "3", "4", "5", "6", "7", "8"])
+
+    sem_int = int(semester) if semester.isdigit() else 1
+    pdf_info = get_branch_latest_syllabus_info(branch, sem_int)
+    if pdf_info and pdf_info.get("url"):
+        st.link_button(
+            f"📄 Open Official {branch} Syllabus PDF ({pdf_info['scheme']})",
+            pdf_info["url"],
+            help=f"Opens official GPREC {branch} syllabus document"
+        )
+    
+    all_links = get_all_latest_syllabus_links_for_branch(branch)
+    if all_links:
+        with st.expander(f"📁 All Official Scheme Syllabi for {branch}"):
+            for l in all_links:
+                st.markdown(f"- [{l['title']}]({l['url']}) *(Scheme: {l.get('scheme', 'Official')})*")
+
+    st.markdown("<div style='margin-bottom:0.75rem;'></div>", unsafe_allow_html=True)
         
     if st.button("View Subjects"):
-        try:
-            with db.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "SELECT course_code, course_title, unit_number, topics, outcomes "
-                    "FROM syllabus WHERE branch = ? AND semester = ? "
-                    "ORDER BY course_code, unit_number", 
-                    (branch, semester)
-                )
-                rows = cursor.fetchall()
-        except Exception as e:
-            st.error(f"Error loading syllabus: {e}")
-            return
+        rows = get_cached_academics_subjects(db, branch, semester)
             
         if not rows:
-            st.info(f"No syllabus data found for {branch} Semester {semester}.")
+            st.info(f"No indexed subject breakdown found for {branch} Semester {semester}. You can still open the official syllabus PDF above!")
             return
             
         st.markdown(f"### {branch} - Semester {semester} Subjects")
@@ -423,6 +623,557 @@ def render_academics_page(db):
                 if cdata['outcomes']:
                     st.markdown("#### Course Outcomes")
                     st.markdown(cdata['outcomes'])
+
+def _handle_doubt_click(d):
+    st.session_state.doubt_prompt_trigger = d
+
+@st.fragment
+def render_subject_assistance_fragment(pipeline, db):
+    db = _ensure_fresh_db(db)
+    from src.faculty_parser import DEPARTMENT_CONFIGS
+    
+    # 1. State preservation
+    if "sub_assist_branch" not in st.session_state or st.session_state.sub_assist_branch == "CST":
+        st.session_state.sub_assist_branch = "CSE"
+    if "sub_assist_scheme" not in st.session_state:
+        st.session_state.sub_assist_scheme = "2023"
+    if "sub_assist_semester" not in st.session_state:
+        st.session_state.sub_assist_semester = "3"
+    if "sub_assist_custom_subject" not in st.session_state:
+        st.session_state.sub_assist_custom_subject = ""
+    if "subject_doubt_chats" not in st.session_state:
+        st.session_state.subject_doubt_chats = {}
+    if "doubt_prompt_trigger" not in st.session_state:
+        st.session_state.doubt_prompt_trigger = None
+
+    # Canonical departments from faculty_parser (excluding CST as requested)
+    all_dept_codes = [d["short_code"] for d in DEPARTMENT_CONFIGS if d["short_code"] != "CST"]
+    dept_name_map = {d["short_code"]: d["name"] for d in DEPARTMENT_CONFIGS if d["short_code"] != "CST"}
+
+    # 4 columns for selectors: Branch, Scheme, Semester, Subject
+    col1, col2, col3, col4 = st.columns([1.3, 1.0, 0.9, 2.2])
+
+    # 1. Branch Selector (All 10 departments)
+    with col1:
+        cur_branch = st.session_state.sub_assist_branch
+        b_idx = all_dept_codes.index(cur_branch) if cur_branch in all_dept_codes else 0
+        selected_branch = st.selectbox(
+            "Branch",
+            all_dept_codes,
+            index=b_idx,
+            format_func=lambda c: f"{c} - {dept_name_map.get(c, c)}",
+            key="sub_assist_branch_selector"
+        )
+        st.session_state.sub_assist_branch = selected_branch
+
+    # 2. Scheme Selector (from syllabus table, default to newest that has data)
+    schemes_available = get_cached_syllabus_schemes(db, selected_branch)
+    if not schemes_available:
+        schemes_available = ["2023", "2020"]
+    with col2:
+        cur_scheme = st.session_state.sub_assist_scheme
+        sch_idx = schemes_available.index(cur_scheme) if cur_scheme in schemes_available else 0
+        selected_scheme = st.selectbox(
+            "Scheme",
+            schemes_available,
+            index=sch_idx,
+            format_func=lambda s: s if any(k in str(s).lower() for k in ("scheme", "r-", "r2")) else f"Scheme-{s}",
+            key=f"sub_assist_scheme_selector_{selected_branch}"
+        )
+        st.session_state.sub_assist_scheme = selected_scheme
+
+    # 3. Semester Selector (only semesters that have rows)
+    sems_available = get_cached_syllabus_semesters(db, selected_branch, selected_scheme)
+    if not sems_available:
+        sems_available = [1, 2, 3, 4, 5, 6, 7]
+    sem_str_list = [str(s) for s in sems_available]
+    with col3:
+        cur_sem = str(st.session_state.sub_assist_semester)
+        sem_idx = sem_str_list.index(cur_sem) if cur_sem in sem_str_list else (0 if "1" in sem_str_list else 0)
+        selected_sem = st.selectbox(
+            "Semester",
+            sem_str_list,
+            index=sem_idx,
+            key=f"sub_assist_sem_selector_{selected_branch}_{selected_scheme}"
+        )
+        st.session_state.sub_assist_semester = selected_sem
+
+    sem_int = int(selected_sem) if selected_sem.isdigit() else 1
+
+    # Show Note "Common for all branches" when Year 1 (Semester 1 or 2)
+    if sem_int in (1, 2):
+        st.info("ℹ️ Year 1 uses the common I B.Tech syllabus. (**Common for all branches**)")
+
+    # 4. Subject Selector:
+    # List subjects from timetable_subjects first (marked "[Running this semester]"),
+    # then remaining subjects of that semester from syllabus. Last option: "Other subject (type the name)"
+    combined_subjects = get_cached_subject_assistance_subjects(db, selected_branch, sem_int, selected_scheme)
+
+    resolved_title = ""
+    resolved_code = ""
+    resolved_credits = ""
+    resolved_ltp = ""
+    resolved_url = ""
+    resolved_regulation = selected_scheme
+    is_running_subject = False
+    is_custom_subject = False
+    subject_needs_review = 0
+
+    with col4:
+        if combined_subjects:
+            subject_options = [s["display_label"] for s in combined_subjects]
+            subject_options.append("Other subject (type the name)")
+
+            selected_subj_opt = st.selectbox(
+                "Subject",
+                subject_options,
+                key=f"sub_assist_subject_selector_{selected_branch}_{selected_scheme}_{selected_sem}"
+            )
+
+            if selected_subj_opt == "Other subject (type the name)":
+                is_custom_subject = True
+                custom_name = st.text_input(
+                    "Type subject name",
+                    value=st.session_state.sub_assist_custom_subject,
+                    placeholder=f"e.g. {selected_branch} subject name",
+                    key=f"sub_assist_custom_subject_input_{selected_branch}_{selected_scheme}_{selected_sem}"
+                )
+                st.session_state.sub_assist_custom_subject = custom_name
+                resolved_title = custom_name.strip() if custom_name.strip() else f"Custom {selected_branch} Subject"
+                resolved_code = "OTHER"
+            else:
+                matched_idx = subject_options.index(selected_subj_opt)
+                matched_subj = combined_subjects[matched_idx]
+                resolved_title = matched_subj["course_title"]
+                resolved_code = matched_subj.get("course_code") or ""
+                resolved_credits = matched_subj.get("credits") or ""
+                resolved_ltp = matched_subj.get("ltp") or ""
+                resolved_url = matched_subj.get("document_url") or ""
+                resolved_regulation = matched_subj.get("regulation") or selected_scheme
+                is_running_subject = matched_subj.get("is_running", False)
+                subject_needs_review = matched_subj.get("needs_review", 0)
+        else:
+            # If a combination has no data, show a short message and the type-the-name option. Never show an empty page.
+            is_custom_subject = True
+            st.info("No indexed subjects found for this selection — type your subject name to proceed.")
+            custom_name = st.text_input(
+                "Type subject name",
+                value=st.session_state.sub_assist_custom_subject,
+                placeholder=f"e.g. {selected_branch} Sem {selected_sem} Subject",
+                key=f"sub_assist_custom_input_empty_{selected_branch}_{selected_scheme}_{selected_sem}"
+            )
+            st.session_state.sub_assist_custom_subject = custom_name
+            resolved_title = custom_name.strip() if custom_name.strip() else f"{selected_branch} Sem {selected_sem} Subject"
+            resolved_code = "CUSTOM"
+
+    # Fetch units for this subject if in DB
+    units_data = []
+    if not is_custom_subject and resolved_title:
+        units_data = get_cached_syllabus_units_for_course(
+            db,
+            branch=selected_branch,
+            semester=sem_int,
+            course_title=resolved_title,
+            course_code=resolved_code if resolved_code not in ("OTHER", "CUSTOM", "") else None
+        )
+
+        if units_data:
+            if not resolved_url and units_data[0].get("document_url"):
+                resolved_url = units_data[0]["document_url"]
+            if not resolved_credits and units_data[0].get("credits"):
+                resolved_credits = units_data[0]["credits"]
+            if not resolved_ltp and units_data[0].get("ltp"):
+                resolved_ltp = units_data[0]["ltp"]
+            if not resolved_regulation and units_data[0].get("regulation"):
+                resolved_regulation = units_data[0]["regulation"]
+
+    # Subject Key for separate message history and caching
+    subject_key = f"{selected_branch}_{selected_scheme}_s{selected_sem}_{resolved_code}_{resolved_title}".replace(" ", "_")
+
+    # Render Compact Subject Header Card
+    badges = []
+    if is_running_subject:
+        badges.append('<span class="badge-running">⚡ Running this semester</span>')
+    if resolved_code and resolved_code not in ("OTHER", "CUSTOM"):
+        badges.append(f'<span class="badge-code">{resolved_code}</span>')
+    if resolved_credits and str(resolved_credits).strip().lower() not in ("none", "", "0"):
+        badges.append(f'<span class="badge-credit">Credits: {resolved_credits}</span>')
+    if resolved_ltp and str(resolved_ltp).strip().lower() not in ("none", ""):
+        badges.append(f'<span class="badge-ltp">L-T-P: {resolved_ltp}</span>')
+    
+    reg_label = resolved_regulation if any(k in str(resolved_regulation).lower() for k in ("scheme", "r-", "r2")) else f"Scheme-{resolved_regulation}"
+    badges.append(f'<span class="badge-credit">{reg_label}</span>')
+    badges_html = "".join(badges)
+
+    if units_data:
+        unit_badge_text = f"📚 {len(units_data)} Units Indexed"
+    elif is_running_subject:
+        unit_badge_text = "⚡ Running Course (Timetable)"
+    else:
+        unit_badge_text = "✍️ Custom Subject"
+    
+    render_html_block(f"""
+        <div class="subject-header-card">
+            <div class="subject-header-top">
+                <div class="subject-header-title">{resolved_title}</div>
+                <div class="subject-header-badges">
+                    {badges_html}
+                </div>
+            </div>
+            <div class="subject-header-sub">
+                <span>🏛️ Branch: <b>{selected_branch}</b></span>
+                <span>•</span>
+                <span>📜 Scheme: <b>{reg_label}</b></span>
+                <span>•</span>
+                <span>📅 Semester: <b>{selected_sem}</b></span>
+                <span>•</span>
+                <span>{unit_badge_text}</span>
+            </div>
+        </div>
+    """)
+
+    # 3. Five Tabs
+    tab_doubt, tab_syllabus, tab_explain, tab_practice, tab_revision = st.tabs([
+        "💬 Ask a Doubt",
+        "📖 Syllabus",
+        "💡 Explain a Topic",
+        "✍️ Practice",
+        "⚡ Quick Revision"
+    ])
+
+    # -------------------------------------------------------------
+    # TAB A: Ask a Doubt
+    # -------------------------------------------------------------
+    with tab_doubt:
+        # Separate message history per subject
+        history = st.session_state.subject_doubt_chats.setdefault(subject_key, [])
+
+        chat_container = st.container()
+
+        active_doubt = st.session_state.doubt_prompt_trigger
+        if st.session_state.doubt_prompt_trigger:
+            st.session_state.doubt_prompt_trigger = None
+
+        # Chat Input at bottom of the tab
+        doubt_input_val = st.chat_input(f"Ask a doubt about {resolved_title}...", key=f"doubt_input_{subject_key}")
+        if doubt_input_val:
+            active_doubt = doubt_input_val
+
+        # Container for chat messages above the input
+        with chat_container:
+            # If chat is empty and no doubt is being answered right now, show 3 example doubts
+            first_topics = units_data[0].get("topics", "") if units_data else ""
+            example_doubts = generate_example_doubts(resolved_title, first_topics)
+
+            if not history and not active_doubt:
+                st.markdown("<p style='font-size:0.88rem; color:var(--slate-600); margin-bottom:0.5rem;'>💡 <b>Example doubts for this subject:</b></p>", unsafe_allow_html=True)
+                cols = st.columns(len(example_doubts))
+                for i, d in enumerate(example_doubts):
+                    with cols[i]:
+                        st.button(d, key=f"ex_doubt_{subject_key}_{i}", use_container_width=True, on_click=_handle_doubt_click, args=(d,))
+                st.markdown("---")
+
+            # Display all previous conversation messages (rendered exactly once)
+            for msg in history:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+
+            # Process active query (single turn, renders once and appends to history)
+            if active_doubt:
+                history.append({"role": "user", "content": active_doubt})
+                with st.chat_message("user"):
+                    st.markdown(active_doubt)
+                with st.chat_message("assistant"):
+                    with st.spinner("Preparing your explanation..."):
+                        client = getattr(pipeline, "client", None)
+                        model_name = getattr(pipeline, "model_name", None)
+                        ans = answer_subject_doubt(
+                            active_doubt,
+                            resolved_title,
+                            units_data=units_data,
+                            history=history[:-1],
+                            client=client,
+                            model_name=model_name,
+                            db=db,
+                            branch=selected_branch,
+                            scheme=selected_scheme
+                        )
+                    st.markdown(ans)
+                history.append({"role": "assistant", "content": ans})
+
+            # Option to clear conversation for this subject
+            if history:
+                st.markdown("<div style='margin-top:0.75rem;'></div>", unsafe_allow_html=True)
+                col_c1, col_c2 = st.columns([4, 1])
+                with col_c2:
+                    if st.button("🗑️ Clear chat", key=f"clear_doubt_{subject_key}", use_container_width=True):
+                        st.session_state.subject_doubt_chats[subject_key] = []
+                        st.rerun(scope="fragment")
+
+    # -------------------------------------------------------------
+    # TAB B: Syllabus
+    # -------------------------------------------------------------
+    with tab_syllabus:
+        authoritative_pdf = get_branch_latest_syllabus_pdf(selected_branch, sem_int)
+        authoritative_info = get_branch_latest_syllabus_info(selected_branch, sem_int)
+        
+        pdf_to_open = resolved_url or authoritative_pdf
+        if not pdf_to_open or is_cross_branch_url(pdf_to_open, selected_branch):
+            pdf_to_open = authoritative_pdf
+
+        if pdf_to_open:
+            scheme_label = authoritative_info["scheme"] if authoritative_info else "Latest Scheme"
+            st.link_button(
+                f"📄 Open Official {selected_branch} Syllabus PDF ({scheme_label})",
+                pdf_to_open,
+                help=f"Opens official GPREC {selected_branch} syllabus document"
+            )
+            st.markdown("<div style='margin-bottom:0.75rem;'></div>", unsafe_allow_html=True)
+
+        # Show credits and LTP if available
+        if resolved_credits or resolved_ltp:
+            meta_items = []
+            if resolved_credits and str(resolved_credits).strip().lower() not in ("none", "", "0"):
+                meta_items.append(f"**Credits:** {resolved_credits}")
+            if resolved_ltp and str(resolved_ltp).strip().lower() not in ("none", ""):
+                meta_items.append(f"**L-T-P:** {resolved_ltp}")
+            if meta_items:
+                st.markdown(" • ".join(meta_items))
+                st.markdown("<div style='margin-bottom:0.5rem;'></div>", unsafe_allow_html=True)
+
+        branch_all_links = get_all_latest_syllabus_links_for_branch(selected_branch)
+        if branch_all_links:
+            with st.expander(f"📁 More Official Syllabi for {selected_branch}"):
+                for l in branch_all_links:
+                    if l.get("url") != pdf_to_open:
+                        st.markdown(f"- [{l['title']}]({l['url']}) *(Scheme: {l.get('scheme', 'Official')})*")
+            st.markdown("<div style='margin-bottom:0.75rem;'></div>", unsafe_allow_html=True)
+
+        if units_data:
+            for u in units_data:
+                unit_num = u.get("unit_number", "")
+                unit_title = u.get("unit_title", "")
+                topics = u.get("topics", "")
+                textbooks = u.get("textbooks", "")
+                outcomes = u.get("outcomes", "")
+                needs_rev = u.get("needs_review", 0)
+
+                with st.expander(f"Unit {unit_num}: {unit_title}", expanded=True):
+                    if needs_rev == 1:
+                        st.markdown("<div style='background-color:#fffbeb; color:#b45309; border:1px solid #fcd34d; border-radius:6px; padding:6px 10px; font-size:0.8rem; margin-bottom:8px;'>⚠️ Check this against the official syllabus</div>", unsafe_allow_html=True)
+                    st.markdown(f"**Topics:**\n\n{topics}")
+                    if textbooks:
+                        st.markdown(f"**Textbooks / References:**\n\n{textbooks}")
+                    if outcomes:
+                        st.markdown(f"**Course Outcomes (CO):**\n\n{outcomes}")
+        else:
+            st.info(f"Detailed unit breakdown for '{resolved_title}' is not currently indexed in the syllabus table. You can still use the **Explain a Topic**, **Practice**, and **Ask a Doubt** tabs!")
+
+    # -------------------------------------------------------------
+    # TAB C: Explain a Topic
+    # -------------------------------------------------------------
+    with tab_explain:
+        st.markdown("Select a unit and topic from the syllabus or enter any sub-concept for a thorough, step-by-step breakdown.")
+
+        if units_data:
+            unit_choices = [f"Unit {u.get('unit_number')}: {u.get('unit_title')}" for u in units_data]
+            chosen_unit_str = st.selectbox("Select Unit", unit_choices, key=f"explain_unit_sel_{subject_key}")
+            chosen_u_obj = next((u for u in units_data if f"Unit {u.get('unit_number')}: {u.get('unit_title')}" == chosen_unit_str), units_data[0])
+            parsed_topics = split_topics(chosen_u_obj.get("topics", ""))
+            if parsed_topics:
+                chosen_topic_sel = st.selectbox("Select Topic from Syllabus", parsed_topics, key=f"explain_topic_sel_{subject_key}")
+            else:
+                chosen_topic_sel = chosen_u_obj.get("unit_title", "General Concepts")
+        else:
+            chosen_unit_str = "Unit 1: Fundamentals"
+            chosen_topic_sel = "Core Principles"
+
+        custom_topic_txt = st.text_input(
+            "Free text topic or specific sub-question (optional):",
+            placeholder="e.g. Infix to postfix conversion, or normal forms in DBMS",
+            key=f"explain_free_text_{subject_key}"
+        )
+
+        effective_topic = custom_topic_txt.strip() if custom_topic_txt.strip() else chosen_topic_sel
+
+        explain_btn = st.button("Explain Topic", type="primary", key=f"explain_submit_btn_{subject_key}")
+
+        cache_key_exp = get_subject_cache_key(
+            resolved_title, chosen_unit_str, effective_topic, "explain",
+            branch=selected_branch, scheme=selected_scheme
+        )
+        cached_exp = db.get_cached_answer(cache_key_exp)
+
+        explanation_content = None
+        if explain_btn:
+            with st.status("Preparing your explanation...", expanded=False):
+                sys_p, usr_p = build_topic_explanation_prompt(
+                    resolved_title,
+                    chosen_unit_str,
+                    effective_topic,
+                    user_notes=custom_topic_txt.strip() or None
+                )
+                client = getattr(pipeline, "client", None)
+                model_name = getattr(pipeline, "model_name", None)
+                raw_exp = call_subject_llm(sys_p, usr_p, client=client, model_name=model_name)
+                explanation_content = clean_subject_response(raw_exp)
+                if VERIFICATION_LINE.lower() not in explanation_content.lower():
+                    explanation_content = f"{explanation_content.rstrip()}\n\n{VERIFICATION_LINE}"
+                db.set_cached_answer(cache_key_exp, {
+                    "answer": explanation_content,
+                    "response_type": "ANSWERED",
+                    "subject": resolved_title
+                })
+        elif cached_exp and cached_exp.get("answer"):
+            explanation_content = clean_subject_response(cached_exp["answer"])
+
+        if explanation_content:
+            st.markdown(explanation_content)
+
+    # -------------------------------------------------------------
+    # TAB D: Practice
+    # -------------------------------------------------------------
+    with tab_practice:
+        st.markdown(f'<span class="practice-disclaimer-badge">ℹ️ {PRACTICE_DISCLAIMER}</span>', unsafe_allow_html=True)
+
+        col_p1, col_p2, col_p3 = st.columns([2, 1, 1])
+        with col_p1:
+            if units_data:
+                unit_prac_choices = [f"Unit {u.get('unit_number')}: {u.get('unit_title')}" for u in units_data] + ["All Units"]
+            else:
+                unit_prac_choices = ["Unit 1", "All Units"]
+            prac_unit = st.selectbox("Choose Unit", unit_prac_choices, key=f"prac_unit_{subject_key}")
+        with col_p2:
+            prac_count = st.slider("Number of Questions", min_value=3, max_value=10, value=5, key=f"prac_count_{subject_key}")
+        with col_p3:
+            prac_type = st.radio("Question Type", ["Multiple Choice", "Short Answer"], key=f"prac_type_{subject_key}")
+
+        generate_prac_btn = st.button("Generate Practice Questions", type="primary", key=f"prac_btn_{subject_key}")
+
+        cache_key_prac = get_subject_cache_key(
+            resolved_title, prac_unit, f"{prac_count}_{prac_type}", "practice",
+            branch=selected_branch, scheme=selected_scheme
+        )
+        cached_prac = db.get_cached_answer(cache_key_prac)
+
+        prac_content = None
+        if generate_prac_btn:
+            with st.status("Preparing your practice questions...", expanded=False):
+                sel_topics = ""
+                if units_data and prac_unit != "All Units":
+                    matched_u = next((u for u in units_data if f"Unit {u.get('unit_number')}: {u.get('unit_title')}" == prac_unit), None)
+                    if matched_u:
+                        sel_topics = matched_u.get("topics", "")
+                sys_p, usr_p = build_practice_prompt(resolved_title, prac_unit, prac_count, prac_type, unit_topics=sel_topics)
+                client = getattr(pipeline, "client", None)
+                model_name = getattr(pipeline, "model_name", None)
+                raw_prac = call_subject_llm(sys_p, usr_p, client=client, model_name=model_name)
+                prac_content = clean_subject_response(raw_prac)
+                if VERIFICATION_LINE.lower() not in prac_content.lower():
+                    prac_content = f"{prac_content.rstrip()}\n\n{VERIFICATION_LINE}"
+                db.set_cached_answer(cache_key_prac, {
+                    "answer": prac_content,
+                    "response_type": "ANSWERED",
+                    "subject": resolved_title
+                })
+        elif cached_prac and cached_prac.get("answer"):
+            prac_content = clean_subject_response(cached_prac["answer"])
+
+        if prac_content:
+            # Render Practice Content
+            if "multiple choice" in prac_type.lower():
+                mcq_json_match = re.search(r'```(?:json)?\s*(\[\s*\{[\s\S]*?\}\s*\])\s*```', prac_content)
+                mcq_list = None
+                if mcq_json_match:
+                    try:
+                        mcq_list = json.loads(mcq_json_match.group(1))
+                    except Exception:
+                        pass
+
+                if mcq_list and isinstance(mcq_list, list):
+                    for idx, q in enumerate(mcq_list):
+                        q_num = q.get("question_number", idx + 1)
+                        q_text = q.get("question", "")
+                        options = q.get("options", {})
+                        correct_opt = str(q.get("correct_option", "")).strip().upper()
+                        explanation = q.get("explanation", "")
+
+                        st.markdown(f"**Q{q_num}: {q_text}**")
+                        opt_keys = list(options.keys())
+                        opt_display = [f"{k}: {options[k]}" for k in opt_keys]
+
+                        chosen = st.radio(
+                            f"Select answer for Q{q_num}:",
+                            opt_display,
+                            index=None,
+                            key=f"mcq_radio_{cache_key_prac}_{idx}",
+                            label_visibility="collapsed"
+                        )
+
+                        if chosen:
+                            chosen_key = chosen.split(":")[0].strip().upper()
+                            if chosen_key == correct_opt:
+                                st.markdown(f'<div class="mcq-feedback-correct">✅ <b>Correct!</b> Option {chosen_key} is right.<br><b>Explanation:</b> {explanation}</div>', unsafe_allow_html=True)
+                            else:
+                                st.markdown(f'<div class="mcq-feedback-incorrect">❌ <b>Incorrect.</b> You selected {chosen_key}. The correct answer is <b>Option {correct_opt}</b>.<br><b>Explanation:</b> {explanation}</div>', unsafe_allow_html=True)
+                        st.markdown("<div style='margin-bottom:0.75rem;'></div>", unsafe_allow_html=True)
+                    st.markdown(f'<div class="verification-footnote">{VERIFICATION_LINE}</div>', unsafe_allow_html=True)
+                else:
+                    st.markdown(prac_content)
+            else:
+                st.markdown(prac_content)
+
+    # -------------------------------------------------------------
+    # TAB E: Quick Revision
+    # -------------------------------------------------------------
+    with tab_revision:
+        st.markdown("Generate a high-yield, one-page revision summary of a unit including key points, formulas, definitions, and a 5-line recap.")
+
+        if units_data:
+            rev_unit_choices = [f"Unit {u.get('unit_number')}: {u.get('unit_title')}" for u in units_data]
+        else:
+            rev_unit_choices = ["Unit 1: Fundamentals"]
+
+        chosen_rev_unit = st.selectbox("Choose Unit for Quick Revision", rev_unit_choices, key=f"rev_unit_sel_{subject_key}")
+        rev_btn = st.button("Generate Revision Sheet", type="primary", key=f"rev_btn_{subject_key}")
+
+        cache_key_rev = get_subject_cache_key(
+            resolved_title, chosen_rev_unit, "all", "revision",
+            branch=selected_branch, scheme=selected_scheme
+        )
+        cached_rev = db.get_cached_answer(cache_key_rev)
+
+        rev_content = None
+        if rev_btn:
+            with st.status("Preparing your revision summary...", expanded=False):
+                sel_topics = ""
+                if units_data:
+                    matched_u = next((u for u in units_data if f"Unit {u.get('unit_number')}: {u.get('unit_title')}" == chosen_rev_unit), None)
+                    if matched_u:
+                        sel_topics = matched_u.get("topics", "")
+                sys_p, usr_p = build_quick_revision_prompt(resolved_title, chosen_rev_unit, unit_topics=sel_topics)
+                client = getattr(pipeline, "client", None)
+                model_name = getattr(pipeline, "model_name", None)
+                raw_rev = call_subject_llm(sys_p, usr_p, client=client, model_name=model_name)
+                rev_content = clean_subject_response(raw_rev)
+                if VERIFICATION_LINE.lower() not in rev_content.lower():
+                    rev_content = f"{rev_content.rstrip()}\n\n{VERIFICATION_LINE}"
+                db.set_cached_answer(cache_key_rev, {
+                    "answer": rev_content,
+                    "response_type": "ANSWERED",
+                    "subject": resolved_title
+                })
+        elif cached_rev and cached_rev.get("answer"):
+            rev_content = clean_subject_response(cached_rev["answer"])
+
+        if rev_content:
+            st.markdown(rev_content)
+
+def render_subject_assistance_page(pipeline, db):
+    db = _ensure_fresh_db(db)
+    st.title("🎓 Subject Assistance")
+    st.markdown("Your patient AI academic tutor for B.Tech subjects, syllabus reference, practice problems, and quick revision.")
+    render_subject_assistance_fragment(pipeline, db)
 
 def render_admin_page(db):
     st.title("⚙️ Admin & Maintenance")
@@ -498,6 +1249,7 @@ def render_admin_page(db):
                     st.error("Please enter a valid admin name. It cannot be blank or 'admin'.")
                 else:
                     db.upsert_verified_fact(cat, entity, attr, val, src, verified_by=admin_name.strip())
+                    st.cache_data.clear()
                     st.success(f"Saved verified fact for {entity} ({attr}) by {admin_name.strip()}!")
                     st.rerun()
 
@@ -540,6 +1292,7 @@ def render_admin_page(db):
                     "source_url": e_src,
                     "needs_review": 1 if e_review else 0
                 })
+                st.cache_data.clear()
                 st.success(f"Saved entity: {e_name} ({e_role})!")
                 st.rerun()
 
@@ -553,13 +1306,13 @@ def render_admin_page(db):
         col = cov_cols[idx % 3]
         with col:
             color = "#10b981" if data["status"] == "PRESENT" else "#f59e0b" if data["status"] == "INCOMPLETE" else "#ef4444"
-            st.markdown(f"""
+            render_html_block(f"""
                 <div style="border: 1px solid #e5e7eb; border-left: 4px solid {color}; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
                     <b style="font-size: 0.9rem;">{target_name}</b><br>
                     <span style="font-size: 0.8rem; color: {color}; font-weight: bold;">{data['status']}</span>
                     <span style="font-size: 0.75rem; color: #6b7280;">({data['pages_count']} pages, {data['total_content_bytes']} bytes)</span>
                 </div>
-            """, unsafe_allow_html=True)
+            """)
 
 
 def get_canonical_designation(desig_raw: str) -> str:
@@ -707,23 +1460,20 @@ def render_chat_faculty_cards(faculty_records: list, key_prefix: str = "chat_fac
         st.markdown(card_html, unsafe_allow_html=True)
 
 
-def render_faculty_directory_page(db):
-    """Render full-featured Faculty Directory page with filters and 3-column card grid."""
-    st.title("👨‍🏫 GPREC Faculty Directory")
-    st.markdown("Search and browse official faculty profiles, qualifications, and department directories.")
-
-    # 1. Department List
-    all_depts = db.get_all_departments_with_faculty()
+@st.fragment
+def render_faculty_directory_fragment(db):
+    # 1. Department List (cached)
+    all_depts = get_cached_departments_with_faculty(db)
     dept_options = ["All Departments"] + all_depts
 
     # 2. Controls
     c_dept, c_search, c_filter = st.columns([1.5, 1.5, 1])
     with c_dept:
-        selected_dept = st.selectbox("Department", dept_options, index=0)
+        selected_dept = st.selectbox("Department", dept_options, index=0, key="fac_filter_dept")
     with c_search:
-        search_query = st.text_input("Search by Name or Keyword", placeholder="e.g. Kishor, Praveen, Ph.D.")
+        search_query = st.text_input("Search by Name or Keyword", placeholder="e.g. Kishor, Praveen, Ph.D.", key="fac_filter_search")
     with c_filter:
-        fac_type = st.selectbox("Type", ["All Faculty", "Regular Only", "Guest / Adjunct", "HODs Only"])
+        fac_type = st.selectbox("Type", ["All Faculty", "Regular Only", "Guest / Adjunct", "HODs Only"], key="fac_filter_type")
 
     # Map filters
     dept_arg = None if selected_dept == "All Departments" else selected_dept
@@ -736,40 +1486,77 @@ def render_faculty_directory_page(db):
     elif fac_type == "HODs Only":
         hod_arg = 1
 
-    # Fetch faculty from database
-    faculty_list = db.get_faculty(
+    # Fetch faculty from database (cached)
+    faculty_list = get_cached_faculty(
+        db,
         department=dept_arg,
-        search=search_query if search_query.strip() else None,
+        search=search_query.strip() if search_query and search_query.strip() else None,
         is_guest=guest_arg,
-        is_hod=hod_arg,
-        is_active=1
+        is_hod=hod_arg
     )
+
+    # Reset page to 1 when filters change
+    cur_filter_state = (selected_dept, search_query.strip() if search_query else "", fac_type)
+    if st.session_state.get("faculty_last_filter") != cur_filter_state:
+        st.session_state.faculty_page_num = 1
+        st.session_state.faculty_last_filter = cur_filter_state
+
+    total_count = len(faculty_list)
+    page_size = 12
+    total_pages = max(1, (total_count + page_size - 1) // page_size)
+    
+    current_page = st.session_state.get("faculty_page_num", 1)
+    if current_page > total_pages:
+        current_page = total_pages
+        st.session_state.faculty_page_num = current_page
+    elif current_page < 1:
+        current_page = 1
+        st.session_state.faculty_page_num = current_page
+
+    start_idx = (current_page - 1) * page_size
+    end_idx = min(start_idx + page_size, total_count)
+    visible_faculty = faculty_list[start_idx:end_idx]
 
     # Status / Metrics Header
     last_updated = "Official Website"
     if faculty_list and faculty_list[0].get("last_checked"):
         last_updated = faculty_list[0]["last_checked"].split()[0]
 
-    st.markdown(f"""
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 18px; margin:15px 0 25px 0; display:flex; justify-content:space-between; align-items:center;">
+    count_label = f"Showing {start_idx + 1}–{end_idx} of {total_count} faculty members (Page {current_page} of {total_pages})" if total_count > 0 else "0 faculty members found"
+
+    render_html_block(f"""
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 18px; margin:15px 0 20px 0; display:flex; justify-content:space-between; align-items:center;">
             <div>
-                <span style="font-size:1.1rem; font-weight:600; color:#1e293b;">Total Faculty Found: </span>
-                <span style="font-size:1.2rem; font-weight:700; color:#2563eb;">{len(faculty_list)}</span>
+                <span style="font-size:1.05rem; font-weight:600; color:#1e293b;">{count_label}</span>
             </div>
             <div style="font-size:0.85rem; color:#64748b;">
                 📅 <b>Last Updated:</b> {last_updated}
             </div>
         </div>
-    """, unsafe_allow_html=True)
+    """)
 
     if not faculty_list:
         st.info("No faculty members found matching your search and filter criteria.")
         return
 
-    # 3. Responsive 3-Column Grid
+    # Pagination controls at top
+    if total_pages > 1:
+        cp1, cp2, cp3 = st.columns([1, 2, 1])
+        with cp1:
+            if st.button("⬅️ Previous", disabled=(current_page <= 1), key=f"fac_top_prev_{current_page}", use_container_width=True):
+                st.session_state.faculty_page_num = current_page - 1
+                st.rerun(scope="fragment")
+        with cp2:
+            st.markdown(f"<div style='text-align:center; padding-top:6px; font-weight:600; color:#475569;'>Page {current_page} of {total_pages}</div>", unsafe_allow_html=True)
+        with cp3:
+            if st.button("Next ➡️", disabled=(current_page >= total_pages), key=f"fac_top_next_{current_page}", use_container_width=True):
+                st.session_state.faculty_page_num = current_page + 1
+                st.rerun(scope="fragment")
+
+    # 3. Responsive 3-Column Grid for visible 12 items only
     cols_per_row = 3
-    for i in range(0, len(faculty_list), cols_per_row):
-        row_members = faculty_list[i:i + cols_per_row]
+    for i in range(0, len(visible_faculty), cols_per_row):
+        row_members = visible_faculty[i:i + cols_per_row]
         cols = st.columns(cols_per_row)
 
         for j, f in enumerate(row_members):
@@ -786,17 +1573,23 @@ def render_faculty_directory_page(db):
                 profile_url = f.get("profile_url")
 
                 with st.container(border=True):
-                    # Top Photo
+                    # Top Photo with relative static URL & lazy loading, and cached b64 fallback
                     if has_photo:
-                        st.image(photo_path, use_container_width=True)
+                        rel_photo = photo_path.replace("\\", "/").replace("data/faculty_photos/", "app/static/faculty_photos/")
+                        b64_fallback = get_base64_of_bin_file(photo_path)
+                        render_html_block(f"""
+                            <div style="height:170px; background:#f8fafc; border-radius:6px; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:10px;">
+                                <img src="{rel_photo}" alt="{name}" loading="lazy" style="max-height:170px; max-width:100%; object-fit:cover; border-radius:6px;" onerror="this.onerror=null; this.src='data:image/jpeg;base64,{b64_fallback}';" />
+                            </div>
+                        """)
                     else:
                         initials = get_initials(name)
-                        st.markdown(f"""
+                        render_html_block(f"""
                             <div style="height:170px; background:#f1f5f9; border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:3rem; color:#94a3b8; margin-bottom:10px;">
                                 <span>👤</span>
                                 <span style="font-size:0.82rem; font-weight:700; color:#64748b; margin-top:4px;">{initials}</span>
                             </div>
-                        """, unsafe_allow_html=True)
+                        """)
 
                     # Info
                     hod_badge = " <span class='fac-badge-hod'>HOD</span>" if is_hod else ""
@@ -807,7 +1600,7 @@ def render_faculty_directory_page(db):
                     st.markdown(f"<div style='font-size:0.82rem; margin-bottom:6px; color:#334155;'>🎓 <b>Qual:</b> {qual}</div>", unsafe_allow_html=True)
 
                     if email:
-                        st.markdown(f"""
+                        render_html_block(f"""
                             <div style='font-size:0.8rem; margin-bottom:10px; display:flex; align-items:center; gap:4px;'>
                                 <span>📧</span> 
                                 <a href='mailto:{email}' style='color:#2563eb; text-decoration:none;'>{email}</a>
@@ -815,14 +1608,36 @@ def render_faculty_directory_page(db):
                                     onclick="navigator.clipboard.writeText('{email}'); this.innerText='✓'; setTimeout(() => this.innerText='📋', 1500);" 
                                     title='Copy email'>📋</button>
                             </div>
-                        """, unsafe_allow_html=True)
+                        """)
                     else:
                         st.markdown("<div style='font-size:0.8rem; color:#94a3b8; margin-bottom:10px;'>📧 <i>Email not listed</i></div>", unsafe_allow_html=True)
 
                     if profile_url:
-                        st.link_button("📄 View Profile", profile_url, key=f"grid_btn_{f['id']}_{i}_{j}", use_container_width=True)
+                        st.link_button("📄 View Profile", profile_url, key=f"grid_btn_{f['id']}_{start_idx}_{i}_{j}", use_container_width=True)
                     else:
-                        st.button("No Profile PDF", key=f"grid_dis_{f['id']}_{i}_{j}", disabled=True, use_container_width=True)
+                        st.button("No Profile PDF", key=f"grid_dis_{f['id']}_{start_idx}_{i}_{j}", disabled=True, use_container_width=True)
+
+    # Bottom pagination
+    if total_pages > 1:
+        st.markdown("<div style='margin-top:1rem;'></div>", unsafe_allow_html=True)
+        bp1, bp2, bp3 = st.columns([1, 2, 1])
+        with bp1:
+            if st.button("⬅️ Previous Page", disabled=(current_page <= 1), key=f"fac_bot_prev_{current_page}", use_container_width=True):
+                st.session_state.faculty_page_num = current_page - 1
+                st.rerun(scope="fragment")
+        with bp2:
+            st.markdown(f"<div style='text-align:center; padding-top:6px; font-weight:600; color:#475569;'>Page {current_page} of {total_pages}</div>", unsafe_allow_html=True)
+        with bp3:
+            if st.button("Next Page ➡️", disabled=(current_page >= total_pages), key=f"fac_bot_next_{current_page}", use_container_width=True):
+                st.session_state.faculty_page_num = current_page + 1
+                st.rerun(scope="fragment")
+
+def render_faculty_directory_page(db):
+    """Render full-featured Faculty Directory page with filters and 3-column card grid."""
+    st.title("👨‍🏫 GPREC Faculty Directory")
+    st.markdown("Search and browse official faculty profiles, qualifications, and department directories.")
+    render_faculty_directory_fragment(db)
+
 
 
 

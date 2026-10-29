@@ -11,9 +11,14 @@ import config
 
 
 class DatabaseManager:
-    def __init__(self, db_path: Optional[Path] = None):
+    _initialized_paths = set()
+
+    def __init__(self, db_path: Optional[Path] = None, force_init: bool = False):
         self.db_path = db_path or config.DB_PATH
-        self.init_db()
+        resolved_key = str(Path(self.db_path).resolve())
+        if force_init or resolved_key not in DatabaseManager._initialized_paths:
+            self.init_db()
+            DatabaseManager._initialized_paths.add(resolved_key)
 
     def get_connection(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
@@ -243,9 +248,75 @@ class DatabaseManager:
                 )
             """)
 
+            # 12. Syllabus Sources Table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS syllabus_sources (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    branch TEXT,
+                    program TEXT,
+                    scheme TEXT,
+                    kind TEXT,
+                    link_text TEXT,
+                    url TEXT,
+                    local_path TEXT,
+                    content_hash TEXT,
+                    status TEXT,
+                    reason TEXT,
+                    last_checked TEXT,
+                    UNIQUE(branch, url)
+                )
+            """)
+
+            # 13. Timetable Subjects Table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS timetable_subjects (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    branch TEXT,
+                    year INTEGER,
+                    semester INTEGER,
+                    section TEXT,
+                    academic_year TEXT,
+                    course_code TEXT,
+                    subject_name TEXT,
+                    faculty TEXT,
+                    source_file TEXT,
+                    page_num INTEGER,
+                    needs_review INTEGER DEFAULT 0,
+                    is_current_semester INTEGER DEFAULT 1
+                )
+            """)
+
+            # 14. Feedback Table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS feedback (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT,
+                    message_idx INTEGER,
+                    question TEXT,
+                    answer TEXT,
+                    rating INTEGER,
+                    feedback_text TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            try:
+                cursor.execute("ALTER TABLE syllabus_sources ADD COLUMN content_hash TEXT")
+            except Exception:
+                pass
+
+            try:
+                cursor.execute("ALTER TABLE timetable_subjects ADD COLUMN is_current_semester INTEGER DEFAULT 1")
+            except Exception:
+                pass
+
             try:
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_faculty_dept ON faculty(department)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_faculty_name ON faculty(name)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_syllabus_sources_branch ON syllabus_sources(branch)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_syllabus_sources_status ON syllabus_sources(status)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_syllabus_upsert_lookup ON syllabus(branch, regulation, course_code, unit_number)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_timetable_lookup ON timetable_subjects(branch, semester, course_code)")
             except Exception:
                 pass
 
@@ -345,6 +416,20 @@ class DatabaseManager:
             removed_entities = cursor.rowcount
             if removed_entities > 0:
                 removed_total += removed_entities
+
+            # 4. Fix branch-specific upper semester syllabus rows incorrectly tagged as 'COMMON'
+            try:
+                cursor.execute("UPDATE syllabus SET branch = 'CSM' WHERE branch = 'COMMON' AND document_url LIKE '%AI&ML%'")
+                cursor.execute("UPDATE syllabus SET branch = 'CSD' WHERE branch = 'COMMON' AND document_url LIKE '%CSE(DS)%'")
+                cursor.execute("UPDATE syllabus SET branch = 'CE' WHERE branch = 'COMMON' AND (document_url LIKE '%CE-S-23%' OR document_url LIKE '%S-20-CE%')")
+                cursor.execute("UPDATE syllabus SET branch = 'ECE' WHERE branch = 'COMMON' AND (document_url LIKE '%ECE S-23%' OR document_url LIKE '%S-20-ECE%')")
+                cursor.execute("UPDATE syllabus SET branch = 'EEE' WHERE branch = 'COMMON' AND (document_url LIKE '%EEE S-23%' OR document_url LIKE '%EEE-S23%' OR (document_url LIKE '%S-20-EEE%' AND year > 1))")
+                cursor.execute("UPDATE syllabus SET branch = 'CSB' WHERE branch = 'COMMON' AND (document_url LIKE '%CSBS%' OR document_url LIKE '%CSB%')")
+                cursor.execute("UPDATE syllabus SET branch = 'CSE' WHERE branch = 'COMMON' AND (document_url LIKE '%S-20-CSE%' OR document_url LIKE '%CSE-S23%')")
+                cursor.execute("UPDATE syllabus SET branch = 'ME' WHERE branch = 'COMMON' AND (document_url LIKE '%S-20-ME%' OR document_url LIKE '%ME S-23%' OR document_url LIKE '%ME-S23%')")
+                cursor.execute("UPDATE syllabus SET branch = 'CST' WHERE branch = 'COMMON' AND document_url LIKE '%CST%'")
+            except Exception:
+                pass
 
             conn.commit()
 
@@ -1492,10 +1577,11 @@ class DatabaseManager:
     def search_syllabus_subject(self, query: str) -> Optional[Dict[str, Any]]:
         """Searches the syllabus table for a matching subject and returns its units and document_url."""
         import re
+        from src.curated_links import get_branch_latest_syllabus_pdf, is_cross_branch_url
         q_lower = query.lower()
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT DISTINCT course_title, course_code, document_url FROM syllabus WHERE course_title IS NOT NULL")
+            cursor.execute("SELECT DISTINCT course_title, course_code, branch, semester, document_url FROM syllabus WHERE course_title IS NOT NULL")
             courses = cursor.fetchall()
             
             matched_course = None
@@ -1518,7 +1604,7 @@ class DatabaseManager:
                     
             if not matched_course:
                 cursor.execute("""
-                    SELECT course_title, course_code, document_url 
+                    SELECT course_title, course_code, branch, semester, document_url 
                     FROM syllabus 
                     WHERE LOWER(unit_title) LIKE ? OR LOWER(topics) LIKE ?
                     LIMIT 1
@@ -1533,13 +1619,668 @@ class DatabaseManager:
                     ORDER BY unit_number ASC
                 """, (matched_course["course_title"],))
                 units = [dict(row) for row in cursor.fetchall()]
+                c_branch = matched_course["branch"]
+                c_sem = matched_course["semester"]
+                raw_url = matched_course["document_url"] or (units[0]["document_url"] if units else None)
+                if c_branch and c_branch != "COMMON" and (not raw_url or is_cross_branch_url(raw_url, c_branch)):
+                    raw_url = get_branch_latest_syllabus_pdf(c_branch, c_sem)
+
                 return {
                     "course_title": matched_course["course_title"],
                     "course_code": matched_course["course_code"],
-                    "document_url": matched_course["document_url"] or (units[0]["document_url"] if units else None),
+                    "branch": c_branch,
+                    "document_url": raw_url,
                     "units": [u["unit_title"] for u in units if u.get("unit_title")]
                 }
             return None
+
+    def get_syllabus_branches(self) -> List[str]:
+        """Returns all 10 canonical branch codes from faculty_parser DEPARTMENT_CONFIGS."""
+        from src.faculty_parser import DEPARTMENT_CONFIGS
+        return [d["short_code"] for d in DEPARTMENT_CONFIGS]
+
+    def get_syllabus_schemes(self, branch: str) -> List[str]:
+        """
+        Returns distinct schemes/regulations for a branch from syllabus table,
+        defaulting to the newest one that has data. Year 1 uses COMMON syllabus schemes.
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            target_b = 'COMMON' if branch.upper() == 'H&S' else branch
+            cursor.execute("""
+                SELECT DISTINCT regulation 
+                FROM syllabus 
+                WHERE (branch = ? OR (branch = 'COMMON' AND semester IN (1, 2)))
+                  AND regulation IS NOT NULL AND TRIM(regulation) != ''
+            """, (target_b,))
+            rows = [r["regulation"] for r in cursor.fetchall()]
+            if not rows:
+                cursor.execute("""
+                    SELECT DISTINCT regulation FROM syllabus 
+                    WHERE regulation IS NOT NULL AND TRIM(regulation) != ''
+                """)
+                rows = [r["regulation"] for r in cursor.fetchall()]
+
+            def scheme_sort_key(s: str) -> int:
+                nums = re.findall(r'\d+', str(s))
+                if nums:
+                    for n in nums:
+                        if len(n) == 4:
+                            return int(n)
+                    return int(nums[0])
+                return 0
+
+            # Sort newest first, with 2023 preferred as primary active scheme if present
+            unique_schemes = list(set(rows))
+            # Sort descending by year
+            sorted_schemes = sorted(unique_schemes, key=scheme_sort_key, reverse=True)
+            # If 2023 is present, ensure 2023 is default if 2026 only has drafts
+            if "2023" in sorted_schemes and sorted_schemes[0] == "2026":
+                # Check if 2023 has significantly more rows for this branch
+                cursor.execute("SELECT COUNT(*) FROM syllabus WHERE (branch = ? OR branch = 'COMMON') AND regulation = '2023'", (target_b,))
+                c_2023 = cursor.fetchone()[0]
+                cursor.execute("SELECT COUNT(*) FROM syllabus WHERE (branch = ? OR branch = 'COMMON') AND regulation = '2026'", (target_b,))
+                c_2026 = cursor.fetchone()[0]
+                if c_2023 > c_2026:
+                    sorted_schemes.remove("2023")
+                    sorted_schemes.insert(0, "2023")
+
+            return sorted_schemes
+
+    def get_syllabus_semesters(self, branch: str, scheme: Optional[str] = None) -> List[int]:
+        """Returns distinct semesters for a branch (and scheme) that actually have rows."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            target_b = 'COMMON' if branch.upper() == 'H&S' else branch
+            if scheme:
+                cursor.execute("""
+                    SELECT DISTINCT semester 
+                    FROM syllabus 
+                    WHERE (branch = ? OR (branch = 'COMMON' AND semester IN (1, 2)))
+                      AND regulation = ?
+                      AND semester IS NOT NULL 
+                    ORDER BY semester ASC
+                """, (target_b, scheme))
+                sems = [int(row["semester"]) for row in cursor.fetchall() if row["semester"] is not None]
+                if sems:
+                    return sems
+
+            cursor.execute("""
+                SELECT DISTINCT semester 
+                FROM syllabus 
+                WHERE (branch = ? OR (branch = 'COMMON' AND semester IN (1, 2))) 
+                  AND semester IS NOT NULL 
+                ORDER BY semester ASC
+            """, (target_b,))
+            return [int(row["semester"]) for row in cursor.fetchall() if row["semester"] is not None]
+
+    def get_syllabus_courses(
+        self, 
+        branch: str, 
+        semester: Optional[int] = None,
+        scheme: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Returns distinct courses for given branch, semester, and scheme (including COMMON year 1 courses)."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            target_b = 'COMMON' if (branch.upper() == 'H&S' or (semester is not None and semester in (1, 2))) else branch
+            
+            conditions = ["course_title IS NOT NULL"]
+            params = []
+            if semester is not None and semester in (1, 2):
+                conditions.append("branch = 'COMMON'")
+            elif branch.upper() == 'H&S':
+                conditions.append("(branch = 'COMMON' OR branch = 'H&S')")
+            else:
+                conditions.append("(branch = ? OR (branch = 'COMMON' AND semester IN (1, 2)))")
+                params.append(branch)
+
+            if semester is not None:
+                conditions.append("semester = ?")
+                params.append(semester)
+
+            if scheme:
+                conditions.append("regulation = ?")
+                params.append(scheme)
+
+            where_sql = " AND ".join(conditions)
+            cursor.execute(f"""
+                SELECT DISTINCT course_code, course_title, credits, ltp, document_url, regulation, needs_review
+                FROM syllabus 
+                WHERE {where_sql}
+                ORDER BY course_code ASC, course_title ASC
+            """, tuple(params))
+            rows = [dict(row) for row in cursor.fetchall()]
+
+            if not rows and scheme:
+                # Try without scheme restriction if empty
+                conditions_no_scheme = [c for c in conditions if "regulation = ?" not in c]
+                params_no_scheme = params[:-1] if scheme in params else params
+                cursor.execute(f"""
+                    SELECT DISTINCT course_code, course_title, credits, ltp, document_url, regulation, needs_review
+                    FROM syllabus 
+                    WHERE {" AND ".join(conditions_no_scheme)}
+                    ORDER BY course_code ASC, course_title ASC
+                """, tuple(params_no_scheme))
+                rows = [dict(row) for row in cursor.fetchall()]
+
+            from src.curated_links import get_branch_latest_syllabus_pdf, is_cross_branch_url
+            for r in rows:
+                doc_u = r.get("document_url")
+                if not doc_u or is_cross_branch_url(doc_u, branch):
+                    r["document_url"] = get_branch_latest_syllabus_pdf(branch, semester)
+            return rows
+
+    def get_syllabus_units_for_course(
+        self, 
+        branch: Optional[str] = None, 
+        semester: Optional[int] = None, 
+        course_title: Optional[str] = None, 
+        course_code: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Returns all unit rows for the specified course."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            conditions = []
+            params = []
+            if course_code:
+                conditions.append("course_code = ?")
+                params.append(course_code)
+            elif course_title:
+                conditions.append("LOWER(course_title) = LOWER(?)")
+                params.append(course_title)
+            if branch:
+                if semester is not None and semester > 2:
+                    conditions.append("branch = ?")
+                    params.append(branch)
+                else:
+                    conditions.append("(branch = ? OR (branch = 'COMMON' AND (semester IN (1, 2) OR semester IS NULL)))")
+                    params.append(branch)
+            if semester is not None:
+                conditions.append("semester = ?")
+                params.append(semester)
+
+            where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
+            query = f"""
+                SELECT id, regulation, branch, year, semester, course_code, course_title,
+                       category, credits, ltp, unit_number, unit_title, topics,
+                       textbooks, outcomes, exam_scheme, needs_review, document_url, page_num
+                FROM syllabus
+                {where_clause}
+                ORDER BY unit_number ASC
+            """
+            rows = [dict(row) for row in cursor.fetchall()]
+
+            # Fallback 1: If no rows found with branch & semester, search by course_code
+            if not rows and course_code and course_code not in ("OTHER", "CUSTOM", ""):
+                if branch:
+                    cursor.execute("""
+                        SELECT id, regulation, branch, year, semester, course_code, course_title,
+                               category, credits, ltp, unit_number, unit_title, topics,
+                               textbooks, outcomes, exam_scheme, needs_review, document_url, page_num
+                        FROM syllabus
+                        WHERE UPPER(course_code) = UPPER(?) AND (branch = ? OR (branch = 'COMMON' AND (semester IN (1, 2) OR semester IS NULL)))
+                        ORDER BY unit_number ASC
+                    """, (course_code, branch))
+                else:
+                    cursor.execute("""
+                        SELECT id, regulation, branch, year, semester, course_code, course_title,
+                               category, credits, ltp, unit_number, unit_title, topics,
+                               textbooks, outcomes, exam_scheme, needs_review, document_url, page_num
+                        FROM syllabus
+                        WHERE UPPER(course_code) = UPPER(?)
+                        ORDER BY unit_number ASC
+                    """, (course_code,))
+                all_code_rows = [dict(row) for row in cursor.fetchall()]
+                if all_code_rows:
+                    units_by_num = {}
+                    for r in all_code_rows:
+                        u_num = r.get("unit_number")
+                        if u_num not in units_by_num or len(r.get("topics") or "") > len(units_by_num[u_num].get("topics") or ""):
+                            units_by_num[u_num] = r
+                    rows = [units_by_num[k] for k in sorted(units_by_num.keys(), key=lambda x: (x is None, x or 0))]
+
+            # Fallback 2: If still no rows, search by normalized course_title within branch
+            if not rows and course_title:
+                clean_t = re.sub(r'([A-Za-z]{3,})(of|through|and|for)([A-Z])', r'\1 \2 \3', course_title)
+                clean_t = re.sub(r'([a-z])([A-Z][a-z])', r'\1 \2', clean_t)
+                clean_t = re.sub(r'([A-Za-z])([&])', r'\1 & ', clean_t)
+                clean_t = re.sub(r'([&])([A-Za-z])', r' & \1', clean_t)
+                clean_t = re.sub(r'\s+', ' ', clean_t).strip()
+                norm_target = re.sub(r'[^a-z0-9]', '', clean_t.lower())
+
+                if branch:
+                    if semester is not None and semester > 2:
+                        cursor.execute("""
+                            SELECT id, regulation, branch, year, semester, course_code, course_title,
+                                   category, credits, ltp, unit_number, unit_title, topics,
+                                   textbooks, outcomes, exam_scheme, needs_review, document_url, page_num
+                            FROM syllabus
+                            WHERE branch = ?
+                            ORDER BY unit_number ASC
+                        """, (branch,))
+                    else:
+                        cursor.execute("""
+                            SELECT id, regulation, branch, year, semester, course_code, course_title,
+                                   category, credits, ltp, unit_number, unit_title, topics,
+                                   textbooks, outcomes, exam_scheme, needs_review, document_url, page_num
+                            FROM syllabus
+                            WHERE branch = ? OR (branch = 'COMMON' AND (semester IN (1, 2) OR semester IS NULL))
+                            ORDER BY unit_number ASC
+                        """, (branch,))
+                else:
+                    cursor.execute("""
+                        SELECT id, regulation, branch, year, semester, course_code, course_title,
+                               category, credits, ltp, unit_number, unit_title, topics,
+                               textbooks, outcomes, exam_scheme, needs_review, document_url, page_num
+                        FROM syllabus
+                        ORDER BY unit_number ASC
+                    """)
+                all_syl = [dict(row) for row in cursor.fetchall()]
+                matching = []
+                for r in all_syl:
+                    s_norm = re.sub(r'[^a-z0-9]', '', (r.get("course_title") or "").lower())
+                    if len(s_norm) >= 3 and len(norm_target) >= 3:
+                        if norm_target == s_norm:
+                            matching.append(r)
+                        elif len(norm_target) >= 5 and norm_target in s_norm:
+                            matching.append(r)
+                        elif len(s_norm) >= 5 and s_norm in norm_target:
+                            matching.append(r)
+                if matching:
+                    units_by_num = {}
+                    for r in matching:
+                        u_num = r.get("unit_number")
+                        if u_num not in units_by_num or len(r.get("topics") or "") > len(units_by_num[u_num].get("topics") or ""):
+                            units_by_num[u_num] = r
+                    rows = [units_by_num[k] for k in sorted(units_by_num.keys(), key=lambda x: (x is None, x or 0))]
+
+            if branch:
+                from src.curated_links import get_branch_latest_syllabus_pdf, is_cross_branch_url
+                for r in rows:
+                    doc_u = r.get("document_url")
+                    if not doc_u or is_cross_branch_url(doc_u, branch):
+                        r["document_url"] = get_branch_latest_syllabus_pdf(branch, semester)
+            return rows
+
+    # --- Syllabus Sources & Upsert Helpers ---
+
+    def upsert_syllabus_source(self, data: Dict[str, Any]) -> int:
+        """Upserts a row into syllabus_sources table keyed by (branch, url)."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO syllabus_sources (
+                    branch, program, scheme, kind, link_text, url, local_path, content_hash, status, reason, last_checked
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(branch, url) DO UPDATE SET
+                    program = excluded.program,
+                    scheme = excluded.scheme,
+                    kind = excluded.kind,
+                    link_text = excluded.link_text,
+                    local_path = COALESCE(excluded.local_path, syllabus_sources.local_path),
+                    content_hash = COALESCE(excluded.content_hash, syllabus_sources.content_hash),
+                    status = CASE 
+                        WHEN syllabus_sources.status IN ('parsed', 'downloaded') AND excluded.status = 'found' 
+                        THEN syllabus_sources.status 
+                        ELSE excluded.status 
+                    END,
+                    reason = CASE 
+                        WHEN syllabus_sources.status IN ('parsed', 'downloaded') AND excluded.status = 'found' 
+                        THEN syllabus_sources.reason 
+                        ELSE excluded.reason 
+                    END,
+                    last_checked = excluded.last_checked
+            """, (
+                data.get("branch"),
+                data.get("program"),
+                data.get("scheme"),
+                data.get("kind"),
+                data.get("link_text"),
+                data.get("url"),
+                data.get("local_path"),
+                data.get("content_hash"),
+                data.get("status"),
+                data.get("reason"),
+                data.get("last_checked")
+            ))
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_syllabus_sources(self, branch: Optional[str] = None, status: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Returns syllabus_sources rows filtered optionally by branch and/or status."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            conditions = []
+            params = []
+            if branch:
+                conditions.append("branch = ?")
+                params.append(branch)
+            if status:
+                conditions.append("status = ?")
+                params.append(status)
+            where_sql = " WHERE " + " AND ".join(conditions) if conditions else ""
+            cursor.execute(f"SELECT * FROM syllabus_sources{where_sql} ORDER BY id ASC", params)
+            return [dict(row) for row in cursor.fetchall()]
+
+    def upsert_syllabus_entry(self, entry: Dict[str, Any]) -> int:
+        """Upserts a course/unit row into the syllabus table keyed by (branch, regulation, course_code, unit_number)."""
+        branch = entry.get("branch")
+        regulation = entry.get("regulation")
+        course_code = entry.get("course_code")
+        unit_number = entry.get("unit_number")
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if unit_number is not None:
+                cursor.execute("""
+                    SELECT id FROM syllabus 
+                    WHERE branch = ? AND regulation = ? AND course_code = ? AND unit_number = ?
+                """, (branch, regulation, course_code, unit_number))
+            else:
+                cursor.execute("""
+                    SELECT id FROM syllabus 
+                    WHERE branch = ? AND regulation = ? AND course_code = ? AND unit_number IS NULL
+                """, (branch, regulation, course_code))
+            row = cursor.fetchone()
+
+            if row:
+                row_id = row["id"]
+                cursor.execute("""
+                    UPDATE syllabus SET
+                        document_url = ?, year = ?, semester = ?, academic_year = ?,
+                        course_title = ?, category = ?, credits = ?, ltp = ?,
+                        unit_title = ?, topics = ?, textbooks = ?, outcomes = ?,
+                        exam_scheme = ?, needs_review = ?, page_num = ?
+                    WHERE id = ?
+                """, (
+                    entry.get("document_url"), entry.get("year"), entry.get("semester"), entry.get("academic_year"),
+                    entry.get("course_title"), entry.get("category"), entry.get("credits"), entry.get("ltp"),
+                    entry.get("unit_title"), entry.get("topics"), entry.get("textbooks"), entry.get("outcomes"),
+                    entry.get("exam_scheme"), entry.get("needs_review", 0), entry.get("page_num"),
+                    row_id
+                ))
+                conn.commit()
+                return row_id
+            else:
+                cursor.execute("""
+                    INSERT INTO syllabus (
+                        document_url, regulation, branch, year, semester, academic_year,
+                        course_code, course_title, category, credits, ltp,
+                        unit_number, unit_title, topics, textbooks, outcomes,
+                        exam_scheme, needs_review, page_num
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    entry.get("document_url"), entry.get("regulation"), entry.get("branch"),
+                    entry.get("year"), entry.get("semester"), entry.get("academic_year"),
+                    entry.get("course_code"), entry.get("course_title"), entry.get("category"),
+                    entry.get("credits"), entry.get("ltp"), entry.get("unit_number"),
+                    entry.get("unit_title"), entry.get("topics"), entry.get("textbooks"),
+                    entry.get("outcomes"), entry.get("exam_scheme"), entry.get("needs_review", 0),
+                    entry.get("page_num")
+                ))
+                conn.commit()
+                return cursor.lastrowid
+
+    def insert_timetable_subject(self, entry: Dict[str, Any]) -> int:
+        """Inserts a subject record into timetable_subjects."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO timetable_subjects (
+                    branch, year, semester, section, academic_year,
+                    course_code, subject_name, faculty, source_file,
+                    page_num, needs_review, is_current_semester
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                entry.get("branch"),
+                entry.get("year"),
+                entry.get("semester"),
+                entry.get("section"),
+                entry.get("academic_year"),
+                entry.get("course_code"),
+                entry.get("subject_name"),
+                entry.get("faculty"),
+                entry.get("source_file"),
+                entry.get("page_num"),
+                entry.get("needs_review", 0),
+                entry.get("is_current_semester", 1)
+            ))
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_current_subjects(self, branch: Optional[str] = None, year_or_semester: Optional[Any] = None) -> List[Dict[str, Any]]:
+        """
+        Retrieves current semester subjects from timetable_subjects for Subject Assistance.
+        Filters by branch and year/semester, only returning rows where is_current_semester = 1.
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            query = """
+                SELECT id, branch, year, semester, section, academic_year,
+                       course_code, subject_name, faculty, source_file, page_num,
+                       needs_review, is_current_semester
+                FROM timetable_subjects
+                WHERE is_current_semester = 1
+            """
+            params = []
+            if branch:
+                query += " AND UPPER(branch) = UPPER(?)"
+                params.append(branch.strip())
+
+            if year_or_semester is not None:
+                val_str = str(year_or_semester).strip()
+                sem_match = re.search(r'\b(?:sem|semester)?\s*([1-8])\b', val_str, re.IGNORECASE)
+                yr_match = re.search(r'\b(?:year|yr)?\s*([1-4])\b', val_str, re.IGNORECASE)
+
+                try:
+                    num = int(val_str)
+                    if num > 4:
+                        query += " AND semester = ?"
+                        params.append(num)
+                    else:
+                        query += " AND (semester = ? OR year = ?)"
+                        params.extend([num, num])
+                except ValueError:
+                    if "sem" in val_str.lower() and sem_match:
+                        query += " AND semester = ?"
+                        params.append(int(sem_match.group(1)))
+                    elif "year" in val_str.lower() and yr_match:
+                        query += " AND year = ?"
+                        params.append(int(yr_match.group(1)))
+                    elif sem_match:
+                        query += " AND (semester = ? OR year = ?)"
+                        params.extend([int(sem_match.group(1)), int(sem_match.group(1))])
+
+            query += " ORDER BY branch, semester, course_code, subject_name"
+            cursor.execute(query, params)
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_all_timetable_subjects(self) -> List[Dict[str, Any]]:
+        """Returns all rows from timetable_subjects."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT id, branch, year, semester, section, academic_year,
+                       course_code, subject_name, faculty, source_file, page_num,
+                       needs_review, is_current_semester
+                FROM timetable_subjects
+                ORDER BY branch, semester, section, subject_name
+            """)
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_subject_assistance_subjects(
+        self, 
+        branch: str, 
+        semester: int, 
+        scheme: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieves running subjects from timetable_subjects first (marked '[Running this semester]'),
+        followed by remaining subjects for that semester from the syllabus table.
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # 1. Running timetable subjects for this branch and semester
+            tt_query = """
+                SELECT DISTINCT course_code, subject_name, faculty, needs_review
+                FROM timetable_subjects
+                WHERE is_current_semester = 1
+            """
+            tt_params = []
+            if branch.upper() == "H&S":
+                tt_query += " AND (year = 1 OR semester IN (1, 2))"
+            else:
+                tt_query += " AND UPPER(branch) = UPPER(?)"
+                tt_params.append(branch)
+                
+            if semester in (1, 2):
+                tt_query += " AND (semester = ? OR year = 1)"
+                tt_params.append(semester)
+            else:
+                yr = (semester + 1) // 2
+                tt_query += " AND (semester = ? OR (semester IS NULL AND year = ?))"
+                tt_params.extend([semester, yr])
+                
+            tt_query += " ORDER BY course_code, subject_name"
+            cursor.execute(tt_query, tuple(tt_params))
+            tt_rows = [dict(r) for r in cursor.fetchall()]
+
+            # 2. Syllabus subjects
+            syl_courses = self.get_syllabus_courses(branch, semester, scheme)
+
+            # Combine and deduplicate
+            combined = []
+            seen_codes = set()
+            seen_titles = set()
+
+            def normalize_title(t: str) -> str:
+                return re.sub(r'[^a-z0-9]', '', (t or '').lower())
+
+            # A. Timetable subjects first (running this semester)
+            for r in tt_rows:
+                code = (r.get("course_code") or "").strip()
+                name = (r.get("subject_name") or "").strip()
+                norm_name = normalize_title(name)
+                
+                # Check for syllabus match to pull metadata
+                matched_syl = None
+                if code:
+                    matched_syl = next((c for c in syl_courses if (c.get("course_code") or "").upper() == code.upper()), None)
+                if not matched_syl and norm_name:
+                    matched_syl = next((c for c in syl_courses if normalize_title(c.get("course_title", "")) == norm_name or norm_name in normalize_title(c.get("course_title", ""))), None)
+                
+                # Global syllabus match fallback for audit/institutional courses (e.g. AC402, HSM202)
+                if not matched_syl and code and code not in ("OTHER", "CUSTOM", ""):
+                    cursor.execute("""
+                        SELECT course_code, course_title, credits, ltp, document_url, regulation
+                        FROM syllabus
+                        WHERE UPPER(course_code) = UPPER(?) AND course_title IS NOT NULL
+                        LIMIT 1
+                    """, (code,))
+                    g_row = cursor.fetchone()
+                    if g_row:
+                        matched_syl = dict(g_row)
+
+                clean_name = re.sub(r'([A-Za-z]{3,})(of|through|and|for)([A-Z])', r'\1 \2 \3', name)
+                clean_name = re.sub(r'([a-z])([A-Z][a-z])', r'\1 \2', clean_name)
+                clean_name = re.sub(r'([A-Za-z])([&])', r'\1 & ', clean_name)
+                clean_name = re.sub(r'([&])([A-Za-z])', r' & \1', clean_name)
+                clean_name = re.sub(r'\s+', ' ', clean_name).strip()
+
+                credits = matched_syl.get("credits") if matched_syl else ""
+                ltp = matched_syl.get("ltp") if matched_syl else ""
+                doc_url = matched_syl.get("document_url") if matched_syl else ""
+                regulation = matched_syl.get("regulation") if matched_syl else (scheme or "")
+                actual_title = matched_syl.get("course_title") if matched_syl else clean_name
+                actual_code = matched_syl.get("course_code") if (matched_syl and matched_syl.get("course_code")) else code
+
+                label_code = f"{actual_code} - " if actual_code else ""
+                display_label = f"[Running this semester] {label_code}{actual_title}"
+
+                if actual_code and actual_code.upper() in seen_codes:
+                    continue
+                if norm_name and norm_name in seen_titles:
+                    continue
+                if matched_syl and normalize_title(matched_syl.get("course_title", "")) in seen_titles:
+                    continue
+
+                if actual_code:
+                    seen_codes.add(actual_code.upper())
+                if norm_name:
+                    seen_titles.add(norm_name)
+                if matched_syl:
+                    seen_titles.add(normalize_title(matched_syl.get("course_title", "")))
+
+                combined.append({
+                    "course_code": actual_code,
+                    "course_title": actual_title,
+                    "credits": credits,
+                    "ltp": ltp,
+                    "document_url": doc_url,
+                    "regulation": regulation,
+                    "is_running": True,
+                    "display_label": display_label,
+                    "needs_review": r.get("needs_review", 0)
+                })
+
+            # B. Remaining syllabus subjects for this semester
+            for sc in syl_courses:
+                c_code = (sc.get("course_code") or "").strip()
+                c_title = (sc.get("course_title") or "").strip()
+                norm_title = normalize_title(c_title)
+
+                if c_code and c_code.upper() in seen_codes:
+                    continue
+                if norm_title and norm_title in seen_titles:
+                    continue
+
+                label_code = f"{c_code} - " if c_code else ""
+                display_label = f"{label_code}{c_title}"
+
+                combined.append({
+                    "course_code": c_code,
+                    "course_title": c_title,
+                    "credits": sc.get("credits", ""),
+                    "ltp": sc.get("ltp", ""),
+                    "document_url": sc.get("document_url", ""),
+                    "regulation": sc.get("regulation", scheme or ""),
+                    "is_running": False,
+                    "display_label": display_label,
+                    "needs_review": sc.get("needs_review", 0)
+                })
+
+            return combined
+
+    def save_feedback(
+        self, 
+        question: str, 
+        answer: str, 
+        rating: int, 
+        message_idx: int = 0, 
+        session_id: str = "",
+        feedback_text: str = ""
+    ) -> int:
+        """Saves user rating (+1 or -1) and feedback for a generated response."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO feedback (session_id, message_idx, question, answer, rating, feedback_text)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (session_id, message_idx, question, answer, rating, feedback_text))
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_feedback_count(self) -> Dict[str, int]:
+        """Returns aggregate positive and negative feedback counts."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT rating, COUNT(*) as cnt FROM feedback GROUP BY rating")
+            counts = {1: 0, -1: 0}
+            for row in cursor.fetchall():
+                counts[row["rating"]] = row["cnt"]
+            return counts
 
 
 if __name__ == "__main__":

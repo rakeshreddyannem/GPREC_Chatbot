@@ -220,12 +220,278 @@ CURATED_OFFICIAL_LINKS: List[Dict[str, Any]] = [
         "url": "https://examcell.gprec.ac.in/payulogin.aspx",
         "category": "examinations",
         "doc_type": "portal"
+    },
+    # 26. Fee Structure & Admissions Notification
+    {
+        "id": "fee_structure_btech",
+        "title": "GPREC Official Fee Structure & Admissions Notification",
+        "url": "https://www.gprec.ac.in/admissions/fee-structure/",
+        "category": "fees",
+        "doc_type": "fee_structure"
+    },
+    # 27. Scheme-2026 I B.Tech (Common All Branches: Sem 1 & 2) Scheme & Syllabus
+    {
+        "id": "syllabus_ibtech_s26",
+        "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Scheme and Syllabus",
+        "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf",
+        "category": "syllabus",
+        "branch": "ALL",
+        "years": ["1", "i"]
+    },
+    # 28. Scheme-2023 I B.Tech (Common All Branches: Sem 1 & 2) Scheme & Syllabus
+    {
+        "id": "syllabus_ibtech_s23",
+        "title": "B.Tech Scheme-2023 I Year (Sem 1 & 2) Scheme and Syllabus",
+        "url": "https://www.gprec.ac.in/scheme-2023/Scheme-2023-I-B.Tech-scheme-Syllabus.pdf",
+        "category": "syllabus",
+        "branch": "ALL",
+        "years": ["1", "i"]
+    },
+    # 29. CSB / CSBS Scheme-2020 Structure & Syllabus
+    {
+        "id": "syllabus_csb_s20",
+        "title": "Computer Science & Business Systems (CSBS) Scheme & Syllabus",
+        "url": "https://www.gprec.ac.in/scheme-2020/GPREC-9X-SCHEME-2020 CSBS STRUCTURE_SYLLABUS.pdf",
+        "category": "syllabus",
+        "branch": "CSB",
+        "years": ["2", "3", "4", "ii", "iii", "iv"]
     }
 ]
+
+# Authoritative latest scheme syllabus PDFs for all 8 standard engineering branches
+BRANCH_LATEST_SYLLABUS_PDFS: Dict[str, Dict[str, Any]] = {
+    "EEE": {
+        "name": "Electrical and Electronics Engineering",
+        "latest_scheme": "Scheme-23",
+        "semesters": {
+            1: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            2: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            3: {"scheme": "Scheme-23", "title": "EEE Scheme-23 II Year (Sem 3 & 4) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/EEE%20S-23%20II%20Year%20Syllabus.pdf"},
+            4: {"scheme": "Scheme-23", "title": "EEE Scheme-23 II Year (Sem 3 & 4) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/EEE%20S-23%20II%20Year%20Syllabus.pdf"},
+            5: {"scheme": "Scheme-23", "title": "EEE Scheme-23 III & IV Year (Sem 5 to 8) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/EEE-S23-III-IV-Year-Syllabus.pdf"},
+            6: {"scheme": "Scheme-23", "title": "EEE Scheme-23 III & IV Year (Sem 5 to 8) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/EEE-S23-III-IV-Year-Syllabus.pdf"},
+            7: {"scheme": "Scheme-23", "title": "EEE Scheme-23 III & IV Year (Sem 5 to 8) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/EEE-S23-III-IV-Year-Syllabus.pdf"},
+            8: {"scheme": "Scheme-23", "title": "EEE Scheme-23 III & IV Year (Sem 5 to 8) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/EEE-S23-III-IV-Year-Syllabus.pdf"}
+        },
+        "default": "https://www.gprec.ac.in/scheme-23/EEE%20S-23%20II%20Year%20Syllabus.pdf",
+        "all_links": [
+            {"title": "EEE Scheme-23 II Year Syllabus (Sem 3 & 4)", "url": "https://www.gprec.ac.in/scheme-23/EEE%20S-23%20II%20Year%20Syllabus.pdf", "scheme": "Scheme-23"},
+            {"title": "EEE Scheme-23 III & IV Year Syllabus (Sem 5 to 8)", "url": "https://www.gprec.ac.in/scheme-23/EEE-S23-III-IV-Year-Syllabus.pdf", "scheme": "Scheme-23"},
+            {"title": "Scheme-2026 I B.Tech (Common All Branches: Sem 1 & 2)", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf", "scheme": "Scheme-2026"},
+            {"title": "EEE Scheme-2020 Complete Syllabus (Legacy)", "url": "https://www.gprec.ac.in/scheme-2020/S-20-EEE-Syllabus.pdf", "scheme": "Scheme-2020"}
+        ]
+    },
+    "CSE": {
+        "name": "Computer Science and Engineering",
+        "latest_scheme": "Scheme-23",
+        "semesters": {
+            1: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            2: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            3: {"scheme": "Scheme-23", "title": "CSE Scheme-23 II Year (Sem 3 & 4) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE%20S-23%20II%20Year%20Syllabus.pdf"},
+            4: {"scheme": "Scheme-23", "title": "CSE Scheme-23 II Year (Sem 3 & 4) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE%20S-23%20II%20Year%20Syllabus.pdf"},
+            5: {"scheme": "Scheme-23", "title": "CSE Scheme-23 III & IV Year (Sem 5 to 8) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE-S-23%20III,IV%20Year%20Syllabus.pdf.pdf"},
+            6: {"scheme": "Scheme-23", "title": "CSE Scheme-23 III & IV Year (Sem 5 to 8) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE-S-23%20III,IV%20Year%20Syllabus.pdf.pdf"},
+            7: {"scheme": "Scheme-23", "title": "CSE Scheme-23 III & IV Year (Sem 5 to 8) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE-S-23%20III,IV%20Year%20Syllabus.pdf.pdf"},
+            8: {"scheme": "Scheme-23", "title": "CSE Scheme-23 III & IV Year (Sem 5 to 8) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE-S-23%20III,IV%20Year%20Syllabus.pdf.pdf"}
+        },
+        "default": "https://www.gprec.ac.in/scheme-23/CSE%20S-23%20II%20Year%20Syllabus.pdf",
+        "all_links": [
+            {"title": "CSE Scheme-23 II Year Syllabus (Sem 3 & 4)", "url": "https://www.gprec.ac.in/scheme-23/CSE%20S-23%20II%20Year%20Syllabus.pdf", "scheme": "Scheme-23"},
+            {"title": "CSE Scheme-23 III & IV Year Syllabus (Sem 5 to 8)", "url": "https://www.gprec.ac.in/scheme-23/CSE-S-23%20III,IV%20Year%20Syllabus.pdf.pdf", "scheme": "Scheme-23"},
+            {"title": "Scheme-2026 I B.Tech (Common All Branches: Sem 1 & 2)", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf", "scheme": "Scheme-2026"},
+            {"title": "CSE Scheme-2020 Complete Syllabus (Legacy)", "url": "https://www.gprec.ac.in/scheme-2020/S-20-CSE-Syllabus.pdf", "scheme": "Scheme-2020"}
+        ]
+    },
+    "ECE": {
+        "name": "Electronics and Communication Engineering",
+        "latest_scheme": "Scheme-23",
+        "semesters": {
+            1: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            2: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            3: {"scheme": "Scheme-23", "title": "ECE Scheme-23 II Year (Sem 3 & 4) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/ECE%20S-23%20II%20Year%20Syllabus.pdf"},
+            4: {"scheme": "Scheme-23", "title": "ECE Scheme-23 II Year (Sem 3 & 4) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/ECE%20S-23%20II%20Year%20Syllabus.pdf"},
+            5: {"scheme": "Scheme-23", "title": "ECE Scheme-23 III & IV Year (Sem 5 to 8) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/ECE%20S-23%20III,IV%20Year%20Syllabus.pdf"},
+            6: {"scheme": "Scheme-23", "title": "ECE Scheme-23 III & IV Year (Sem 5 to 8) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/ECE%20S-23%20III,IV%20Year%20Syllabus.pdf"},
+            7: {"scheme": "Scheme-23", "title": "ECE Scheme-23 III & IV Year (Sem 5 to 8) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/ECE%20S-23%20III,IV%20Year%20Syllabus.pdf"},
+            8: {"scheme": "Scheme-23", "title": "ECE Scheme-23 III & IV Year (Sem 5 to 8) Syllabus", "url": "https://www.gprec.ac.in/scheme-23/ECE%20S-23%20III,IV%20Year%20Syllabus.pdf"}
+        },
+        "default": "https://www.gprec.ac.in/scheme-23/ECE%20S-23%20II%20Year%20Syllabus.pdf",
+        "all_links": [
+            {"title": "ECE Scheme-23 II Year Syllabus (Sem 3 & 4)", "url": "https://www.gprec.ac.in/scheme-23/ECE%20S-23%20II%20Year%20Syllabus.pdf", "scheme": "Scheme-23"},
+            {"title": "ECE Scheme-23 III & IV Year Syllabus (Sem 5 to 8)", "url": "https://www.gprec.ac.in/scheme-23/ECE%20S-23%20III,IV%20Year%20Syllabus.pdf", "scheme": "Scheme-23"},
+            {"title": "Scheme-2026 I B.Tech (Common All Branches: Sem 1 & 2)", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf", "scheme": "Scheme-2026"},
+            {"title": "ECE Scheme-2020 Complete Syllabus (Legacy)", "url": "https://www.gprec.ac.in/scheme-2020/S-20-ECE-Syllabus.pdf", "scheme": "Scheme-2020"}
+        ]
+    },
+    "CE": {
+        "name": "Civil Engineering",
+        "latest_scheme": "Scheme-23",
+        "semesters": {
+            1: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            2: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            3: {"scheme": "Scheme-23", "title": "Civil Engineering Scheme-23 II, III & IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CE-S-23-II-III-IV-Year-Syllabus.pdf"},
+            4: {"scheme": "Scheme-23", "title": "Civil Engineering Scheme-23 II, III & IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CE-S-23-II-III-IV-Year-Syllabus.pdf"},
+            5: {"scheme": "Scheme-23", "title": "Civil Engineering Scheme-23 II, III & IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CE-S-23-II-III-IV-Year-Syllabus.pdf"},
+            6: {"scheme": "Scheme-23", "title": "Civil Engineering Scheme-23 II, III & IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CE-S-23-II-III-IV-Year-Syllabus.pdf"},
+            7: {"scheme": "Scheme-23", "title": "Civil Engineering Scheme-23 II, III & IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CE-S-23-II-III-IV-Year-Syllabus.pdf"},
+            8: {"scheme": "Scheme-23", "title": "Civil Engineering Scheme-23 II, III & IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CE-S-23-II-III-IV-Year-Syllabus.pdf"}
+        },
+        "default": "https://www.gprec.ac.in/scheme-23/CE-S-23-II-III-IV-Year-Syllabus.pdf",
+        "all_links": [
+            {"title": "Civil Engineering Scheme-23 II, III & IV Year Syllabus (Sem 3 to 8)", "url": "https://www.gprec.ac.in/scheme-23/CE-S-23-II-III-IV-Year-Syllabus.pdf", "scheme": "Scheme-23"},
+            {"title": "Scheme-2026 I B.Tech (Common All Branches: Sem 1 & 2)", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf", "scheme": "Scheme-2026"},
+            {"title": "Civil Engineering Scheme-2020 Complete Syllabus (Legacy)", "url": "https://www.gprec.ac.in/scheme-2020/S-20-CE-Syllabus.pdf", "scheme": "Scheme-2020"}
+        ]
+    },
+    "ME": {
+        "name": "Mechanical Engineering",
+        "latest_scheme": "Scheme-23",
+        "semesters": {
+            1: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            2: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            3: {"scheme": "Scheme-23", "title": "Mechanical Engineering Scheme-23 II Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/ME%20S-23%20II%20Year%20Syllabus.pdf"},
+            4: {"scheme": "Scheme-23", "title": "Mechanical Engineering Scheme-23 II Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/ME%20S-23%20II%20Year%20Syllabus.pdf"},
+            5: {"scheme": "Scheme-23", "title": "Mechanical Engineering Scheme-23 III Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/ME-S23-III-Year-Syllabus.pdf.pdf"},
+            6: {"scheme": "Scheme-23", "title": "Mechanical Engineering Scheme-23 III Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/ME-S23-III-Year-Syllabus.pdf.pdf"},
+            7: {"scheme": "Scheme-23", "title": "Mechanical Engineering Scheme-23 IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/SYLLABUS-FOR-IV-%20B.Tech.pdf"},
+            8: {"scheme": "Scheme-23", "title": "Mechanical Engineering Scheme-23 IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/SYLLABUS-FOR-IV-%20B.Tech.pdf"}
+        },
+        "default": "https://www.gprec.ac.in/scheme-23/ME%20S-23%20II%20Year%20Syllabus.pdf",
+        "all_links": [
+            {"title": "Mechanical Engineering Scheme-23 II Year Syllabus (Sem 3 & 4)", "url": "https://www.gprec.ac.in/scheme-23/ME%20S-23%20II%20Year%20Syllabus.pdf", "scheme": "Scheme-23"},
+            {"title": "Mechanical Engineering Scheme-23 III Year Syllabus (Sem 5 & 6)", "url": "https://www.gprec.ac.in/scheme-23/ME-S23-III-Year-Syllabus.pdf.pdf", "scheme": "Scheme-23"},
+            {"title": "Mechanical Engineering Scheme-23 IV Year Syllabus (Sem 7 & 8)", "url": "https://www.gprec.ac.in/scheme-23/SYLLABUS-FOR-IV-%20B.Tech.pdf", "scheme": "Scheme-23"},
+            {"title": "Scheme-2026 I B.Tech (Common All Branches: Sem 1 & 2)", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf", "scheme": "Scheme-2026"},
+            {"title": "Mechanical Engineering Scheme-2020 Complete Syllabus (Legacy)", "url": "https://www.gprec.ac.in/scheme-2020/GPREC-9X-SCHEME-2020%20ME%20STRUCTURE_SYLLABUS.pdf", "scheme": "Scheme-2020"}
+        ]
+    },
+    "CSM": {
+        "name": "CSE (Artificial Intelligence & Machine Learning)",
+        "latest_scheme": "Scheme-23",
+        "semesters": {
+            1: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            2: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            3: {"scheme": "Scheme-23", "title": "CSE (AI & ML) Scheme-23 II Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE(AI&ML)%20S-23%20II%20Year%20Syllabus.pdf"},
+            4: {"scheme": "Scheme-23", "title": "CSE (AI & ML) Scheme-23 II Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE(AI&ML)%20S-23%20II%20Year%20Syllabus.pdf"},
+            5: {"scheme": "Scheme-23", "title": "CSE (AI & ML) Scheme-23 III & IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE(AI&ML)-S-23-III,IV-Year-Syllabus.pdf"},
+            6: {"scheme": "Scheme-23", "title": "CSE (AI & ML) Scheme-23 III & IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE(AI&ML)-S-23-III,IV-Year-Syllabus.pdf"},
+            7: {"scheme": "Scheme-23", "title": "CSE (AI & ML) Scheme-23 III & IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE(AI&ML)-S-23-III,IV-Year-Syllabus.pdf"},
+            8: {"scheme": "Scheme-23", "title": "CSE (AI & ML) Scheme-23 III & IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE(AI&ML)-S-23-III,IV-Year-Syllabus.pdf"}
+        },
+        "default": "https://www.gprec.ac.in/scheme-23/CSE(AI&ML)%20S-23%20II%20Year%20Syllabus.pdf",
+        "all_links": [
+            {"title": "CSE (AI & ML) Scheme-23 II Year Syllabus (Sem 3 & 4)", "url": "https://www.gprec.ac.in/scheme-23/CSE(AI&ML)%20S-23%20II%20Year%20Syllabus.pdf", "scheme": "Scheme-23"},
+            {"title": "CSE (AI & ML) Scheme-23 III & IV Year Syllabus (Sem 5 to 8)", "url": "https://www.gprec.ac.in/scheme-23/CSE(AI&ML)-S-23-III,IV-Year-Syllabus.pdf", "scheme": "Scheme-23"},
+            {"title": "Scheme-2026 I B.Tech (Common All Branches: Sem 1 & 2)", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf", "scheme": "Scheme-2026"},
+            {"title": "CSE (AI & ML) Scheme-2020 Complete Syllabus (Legacy)", "url": "https://www.gprec.ac.in/scheme-2020/S-20-CSE(AI&ML)-Syllabus.pdf", "scheme": "Scheme-2020"}
+        ]
+    },
+    "CSD": {
+        "name": "CSE (Data Science)",
+        "latest_scheme": "Scheme-23",
+        "semesters": {
+            1: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            2: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            3: {"scheme": "Scheme-23", "title": "CSE (Data Science) Scheme-23 II Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE(DS)%20S%20-23%20II%20Year%20Syllabus.pdf"},
+            4: {"scheme": "Scheme-23", "title": "CSE (Data Science) Scheme-23 II Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE(DS)%20S%20-23%20II%20Year%20Syllabus.pdf"},
+            5: {"scheme": "Scheme-23", "title": "CSE (Data Science) Scheme-23 III & IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE(DS)-S-23-III,IV-Year-Syllabus.pdf"},
+            6: {"scheme": "Scheme-23", "title": "CSE (Data Science) Scheme-23 III & IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE(DS)-S-23-III,IV-Year-Syllabus.pdf"},
+            7: {"scheme": "Scheme-23", "title": "CSE (Data Science) Scheme-23 III & IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE(DS)-S-23-III,IV-Year-Syllabus.pdf"},
+            8: {"scheme": "Scheme-23", "title": "CSE (Data Science) Scheme-23 III & IV Year Syllabus", "url": "https://www.gprec.ac.in/scheme-23/CSE(DS)-S-23-III,IV-Year-Syllabus.pdf"}
+        },
+        "default": "https://www.gprec.ac.in/scheme-23/CSE(DS)%20S%20-23%20II%20Year%20Syllabus.pdf",
+        "all_links": [
+            {"title": "CSE (Data Science) Scheme-23 II Year Syllabus (Sem 3 & 4)", "url": "https://www.gprec.ac.in/scheme-23/CSE(DS)%20S%20-23%20II%20Year%20Syllabus.pdf", "scheme": "Scheme-23"},
+            {"title": "CSE (Data Science) Scheme-23 III & IV Year Syllabus (Sem 5 to 8)", "url": "https://www.gprec.ac.in/scheme-23/CSE(DS)-S-23-III,IV-Year-Syllabus.pdf", "scheme": "Scheme-23"},
+            {"title": "Scheme-2026 I B.Tech (Common All Branches: Sem 1 & 2)", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf", "scheme": "Scheme-2026"},
+            {"title": "CSE (Data Science) Scheme-2020 Complete Syllabus (Legacy)", "url": "https://www.gprec.ac.in/scheme-2020/S-20-CSE(DS)-Syllabus.pdf", "scheme": "Scheme-2020"}
+        ]
+    },
+    "CSB": {
+        "name": "Computer Science and Business Systems",
+        "latest_scheme": "Scheme-2020",
+        "semesters": {
+            1: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            2: {"scheme": "Scheme-2026", "title": "B.Tech Scheme-2026 I Year (Sem 1 & 2) Syllabus", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf"},
+            3: {"scheme": "Scheme-2020", "title": "CSBS Scheme-2020 Structure & Syllabus", "url": "https://www.gprec.ac.in/scheme-2020/GPREC-9X-SCHEME-2020 CSBS STRUCTURE_SYLLABUS.pdf"},
+            4: {"scheme": "Scheme-2020", "title": "CSBS Scheme-2020 Structure & Syllabus", "url": "https://www.gprec.ac.in/scheme-2020/GPREC-9X-SCHEME-2020 CSBS STRUCTURE_SYLLABUS.pdf"},
+            5: {"scheme": "Scheme-2020", "title": "CSBS Scheme-2020 Structure & Syllabus", "url": "https://www.gprec.ac.in/scheme-2020/GPREC-9X-SCHEME-2020 CSBS STRUCTURE_SYLLABUS.pdf"},
+            6: {"scheme": "Scheme-2020", "title": "CSBS Scheme-2020 Structure & Syllabus", "url": "https://www.gprec.ac.in/scheme-2020/GPREC-9X-SCHEME-2020 CSBS STRUCTURE_SYLLABUS.pdf"},
+            7: {"scheme": "Scheme-2020", "title": "CSBS Scheme-2020 Structure & Syllabus", "url": "https://www.gprec.ac.in/scheme-2020/GPREC-9X-SCHEME-2020 CSBS STRUCTURE_SYLLABUS.pdf"},
+            8: {"scheme": "Scheme-2020", "title": "CSBS Scheme-2020 Structure & Syllabus", "url": "https://www.gprec.ac.in/scheme-2020/GPREC-9X-SCHEME-2020 CSBS STRUCTURE_SYLLABUS.pdf"}
+        },
+        "default": "https://www.gprec.ac.in/scheme-2020/GPREC-9X-SCHEME-2020 CSBS STRUCTURE_SYLLABUS.pdf",
+        "all_links": [
+            {"title": "CSBS Scheme-2020 Structure & Syllabus (Sem 3 to 8)", "url": "https://www.gprec.ac.in/scheme-2020/GPREC-9X-SCHEME-2020 CSBS STRUCTURE_SYLLABUS.pdf", "scheme": "Scheme-2020"},
+            {"title": "Scheme-2026 I B.Tech (Common All Branches: Sem 1 & 2)", "url": "https://www.gprec.ac.in/scheme-2026/scheme -2026-I-B.Tech-Scheme-and-Syllabus.pdf", "scheme": "Scheme-2026"}
+        ]
+    }
+}
+
+
+def get_branch_latest_syllabus_info(branch: str, semester: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    """Returns dictionary with title, url, scheme for the given branch and semester."""
+    if not branch:
+        return None
+    b_upper = branch.upper().strip()
+    data = BRANCH_LATEST_SYLLABUS_PDFS.get(b_upper)
+    if not data:
+        return None
+    if semester and semester in data["semesters"]:
+        return data["semesters"][semester]
+    return {
+        "scheme": data["latest_scheme"],
+        "title": f"{b_upper} {data['latest_scheme']} Syllabus",
+        "url": data["default"]
+    }
+
+
+def get_branch_latest_syllabus_pdf(branch: str, semester: Optional[int] = None) -> Optional[str]:
+    """Returns the direct PDF URL for the latest syllabus for the given branch and semester."""
+    info = get_branch_latest_syllabus_info(branch, semester)
+    return info["url"] if info else None
+
+
+def get_all_latest_syllabus_links_for_branch(branch: str) -> List[Dict[str, str]]:
+    """Returns all relevant scheme PDF links for the given branch."""
+    if not branch:
+        return []
+    b_upper = branch.upper().strip()
+    data = BRANCH_LATEST_SYLLABUS_PDFS.get(b_upper)
+    return data.get("all_links", []) if data else []
+
+
+def is_cross_branch_url(url: str, branch: str) -> bool:
+    """Detects if a syllabus URL belongs to a different branch than the specified branch."""
+    if not url or not branch:
+        return False
+    u_lower = url.lower()
+    b_upper = branch.upper().strip()
+
+    # Common year 1 URLs belong to all branches
+    if "scheme-2026" in u_lower or "scheme-2023-i-b.tech" in u_lower or "scheme%20-2026" in u_lower:
+        return False
+
+    branch_markers = {
+        "EEE": ["ai&ml", "cse(ai&ml)", "csm", "cse(ds)", "csd", "s-20-ce", "ce-s-23", "s-20-me", "me%20s-23", "me-s23", "s-20-ece", "ece%20s-23", "csbs"],
+        "CSE": ["ai&ml", "cse(ai&ml)", "csm", "cse(ds)", "csd", "s-20-ce", "ce-s-23", "s-20-me", "me%20s-23", "me-s23", "s-20-ece", "ece%20s-23", "s-20-eee", "eee%20s-23", "eee-s23", "csbs"],
+        "ECE": ["ai&ml", "cse(ai&ml)", "csm", "cse(ds)", "csd", "s-20-ce", "ce-s-23", "s-20-me", "me%20s-23", "me-s23", "s-20-eee", "eee%20s-23", "eee-s23", "csbs"],
+        "CE": ["ai&ml", "cse(ai&ml)", "csm", "cse(ds)", "csd", "s-20-ece", "ece%20s-23", "s-20-me", "me%20s-23", "me-s23", "s-20-eee", "eee%20s-23", "eee-s23", "csbs"],
+        "ME": ["ai&ml", "cse(ai&ml)", "csm", "cse(ds)", "csd", "s-20-ce", "ce-s-23", "s-20-ece", "ece%20s-23", "s-20-eee", "eee%20s-23", "eee-s23", "csbs"],
+        "CSM": ["cse(ds)", "csd", "s-20-ce", "ce-s-23", "s-20-me", "me%20s-23", "me-s23", "s-20-ece", "ece%20s-23", "s-20-eee", "eee%20s-23", "eee-s23", "csbs"],
+        "CSD": ["ai&ml", "cse(ai&ml)", "csm", "s-20-ce", "ce-s-23", "s-20-me", "me%20s-23", "me-s23", "s-20-ece", "ece%20s-23", "s-20-eee", "eee%20s-23", "eee-s23", "csbs"],
+        "CSB": ["ai&ml", "cse(ai&ml)", "csm", "cse(ds)", "csd", "s-20-ce", "ce-s-23", "s-20-me", "me%20s-23", "me-s23", "s-20-ece", "ece%20s-23", "s-20-eee", "eee%20s-23", "eee-s23"]
+    }
+
+    markers = branch_markers.get(b_upper, [])
+    return any(m in u_lower for m in markers)
 
 
 def detect_query_branch(q_lower: str) -> Optional[str]:
     """Identifies specific engineering branch mentioned in a syllabus query."""
+    # Check CSB / CSBS first before pure CSE
+    if any(k in q_lower for k in ["csb", "csbs", "business systems", "computer science and business systems"]):
+        return "CSB"
     # Check AI & ML / CSM first
     if any(k in q_lower for k in ["ai&ml", "aiml", "ai and ml", "ai/ml", "csm", "artificial intelligence", "machine learning"]):
         return "CSM"
@@ -251,8 +517,10 @@ def detect_query_branch(q_lower: str) -> Optional[str]:
 
 
 def detect_query_year(q_lower: str) -> Optional[str]:
-    """Identifies academic year mentioned in query (2, 3, 4)."""
-    if any(k in q_lower for k in ["2nd year", "second year", "2 year", "ii year", "ii-year", "year 2", "year ii", "2nd sem", "3rd sem", "4th sem", "iii sem", "iv sem"]):
+    """Identifies academic year mentioned in query (1, 2, 3, 4)."""
+    if any(k in q_lower for k in ["1st year", "first year", "1 year", "i year", "i-year", "year 1", "year i", "1st sem", "2nd sem", "i sem", "ii sem"]):
+        return "1"
+    if any(k in q_lower for k in ["2nd year", "second year", "2 year", "ii year", "ii-year", "year 2", "year ii", "3rd sem", "4th sem", "iii sem", "iv sem"]):
         return "2"
     if any(k in q_lower for k in ["3rd year", "third year", "3 year", "iii year", "iii-year", "year 3", "year iii", "5th sem", "6th sem", "v sem", "vi sem"]):
         return "3"
@@ -362,7 +630,10 @@ def find_relevant_curated_links(query: str) -> List[Dict[str, Any]]:
 
         if branch:
             branch_links = [x for x in syllabus_links if x.get("branch") == branch]
-            if year:
+            if year == "1":
+                y1_links = [x for x in syllabus_links if x.get("branch") == "ALL" and "1" in x.get("years", [])]
+                matched.extend(y1_links)
+            elif year:
                 year_matched = [x for x in branch_links if year in x.get("years", [])]
                 if year_matched:
                     matched.extend(year_matched)
@@ -380,6 +651,15 @@ def find_relevant_curated_links(query: str) -> List[Dict[str, Any]]:
                 for syl in syllabus_links:
                     if syl["id"] in ["syllabus_cse_s23_ii", "syllabus_ece_s23_ii", "syllabus_eee_s23_ii", "syllabus_me_s23_ii", "syllabus_ce_s23_ii_iii_iv"]:
                         matched.append(syl)
+
+    # 9. Fee Structure Queries
+    if any(k in q_lower for k in [
+        "fee structure", "tuition fee", "fees structure", "fee of", "fees of",
+        "fee details", "fees details", "b.tech fee", "btech fee", "college fee", "branch fee"
+    ]):
+        fee_link = next((x for x in CURATED_OFFICIAL_LINKS if x["id"] == "fee_structure_btech"), None)
+        if fee_link and fee_link not in matched:
+            matched.append(fee_link)
 
     # Deduplicate while preserving order
     unique_matched = []

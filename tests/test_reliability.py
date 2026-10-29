@@ -85,7 +85,7 @@ def test_response_formatter_partial():
     assert part["response_type"] == ResponseType.PARTIAL
     assert "Missing Information:" in part["answer"]
     assert "Where to Look:" in part["answer"]
-    assert part["confidence"] == "Medium"
+    assert part["confidence"] == "Low"
 
 def test_acronym_table_curated():
     db = DatabaseManager()

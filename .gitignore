@@ -27,10 +27,12 @@ data/website/*
 data/pdf/*
 data/notices/*
 data/processed/*
+data/syllabus/*
 !data/website/.gitkeep
 !data/pdf/.gitkeep
 !data/notices/.gitkeep
 !data/processed/.gitkeep
+!data/syllabus/.gitkeep
 
 # Vector store & temporary reports
 vectorstore/*
@@ -46,6 +48,7 @@ htmlcov/
 # Temporary & Build artifacts
 .pptx-build/
 deliverables/
+scratch/
 
 
 # Editor / IDE configs
