@@ -101,6 +101,7 @@ def clean_faculty_name(raw_name: str) -> str:
     # Replace non-breaking spaces and repeated whitespace
     name = raw_name.replace('\xa0', ' ').replace('&nbsp;', ' ')
     name = re.sub(r'^\d+[\.\)]\s*', '', name)  # Remove leading numbering like '1. '
+    name = re.sub(r'([A-Za-z]+)\.([A-Za-z])', r'\1. \2', name)  # Ensure space after dot in initials/titles
     name = re.sub(r'\s+', ' ', name).strip()
     return name
 

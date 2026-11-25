@@ -1376,8 +1376,17 @@ def render_chat_faculty_cards(faculty_records: list, key_prefix: str = "chat_fac
     """Render custom modern HTML/CSS photo cards in chat message for faculty queries."""
     if not faculty_records:
         return
+
+    # Deduplicate identical cards by name and department
+    unique_records = []
+    seen = set()
+    for f in faculty_records:
+        k = (re.sub(r'[^a-zA-Z0-9]', '', f.get("name", "")).lower(), f.get("department"))
+        if k not in seen:
+            seen.add(k)
+            unique_records.append(f)
         
-    for idx, f in enumerate(faculty_records[:3]):
+    for idx, f in enumerate(unique_records[:3]):
         photo_path = f.get("photo_path")
         has_photo = photo_path and os.path.exists(photo_path) and os.path.getsize(photo_path) > 0
         name = f.get("name", "Faculty Member")
@@ -1503,6 +1512,35 @@ def render_faculty_directory_fragment(db):
         is_hod=hod_arg
     )
 
+    # When browsing All Departments, deduplicate cross-appointed faculty profiles across branches
+    # so students don't see duplicate cards for the exact same person, while showing all their departments
+    if dept_arg is None and faculty_list:
+        deduped = []
+        seen = {}
+        for f in faculty_list:
+            name = f.get("name", "").strip()
+            title_m = re.match(r'^(dr|sri|smt|prof|mr|mrs|ms)\.?\s*', name, re.IGNORECASE)
+            title = title_m.group(1).lower() if title_m else ""
+            raw_name = re.sub(r'^(dr|sri|smt|prof|mr|mrs|ms)\.?\s*', '', name, flags=re.IGNORECASE)
+            letters = re.sub(r'[^a-zA-Z0-9]', '', raw_name).lower()
+            photo = (f.get("photo_path") or "").replace("\\", "/").split("/")[-1].lower()
+            profile = (f.get("profile_url") or "").replace("\\", "/").split("/")[-1].lower()
+            key = (title, letters, photo or profile)
+            if key in seen:
+                existing = seen[key]
+                existing_depts = existing.get("_all_depts", [existing["department"]])
+                if f["department"] not in existing_depts:
+                    existing_depts.append(f["department"])
+                    existing["_all_depts"] = existing_depts
+                    if f.get("is_hod"):
+                        existing["is_hod"] = 1
+            else:
+                f_copy = dict(f)
+                f_copy["_all_depts"] = [f["department"]]
+                seen[key] = f_copy
+                deduped.append(f_copy)
+        faculty_list = deduped
+
     # Reset page to 1 when filters change
     cur_filter_state = (selected_dept, search_query.strip() if search_query else "", fac_type)
     if st.session_state.get("faculty_last_filter") != cur_filter_state:
@@ -1604,7 +1642,8 @@ def render_faculty_directory_fragment(db):
 
                     st.markdown(f"<div style='font-size:1.05rem; font-weight:700; line-height:1.3; min-height:45px; color:#0f172a;'>{name}{hod_badge}</div>", unsafe_allow_html=True)
                     st.markdown(f"<div style='margin:4px 0;'><span class='fac-badge-desig'>{canonical_desig}</span></div>", unsafe_allow_html=True)
-                    st.markdown(f"<div style='font-size:0.82rem; color:#64748b; margin-bottom:4px;'>🏛️ {dept}</div>", unsafe_allow_html=True)
+                    dept_display = ", ".join(f["_all_depts"]) if f.get("_all_depts") and len(f["_all_depts"]) > 1 else dept
+                    st.markdown(f"<div style='font-size:0.82rem; color:#64748b; margin-bottom:4px;'>🏛️ {dept_display}</div>", unsafe_allow_html=True)
                     st.markdown(f"<div style='font-size:0.82rem; margin-bottom:6px; color:#334155;'>🎓 <b>Qual:</b> {qual}</div>", unsafe_allow_html=True)
 
                     if email:
