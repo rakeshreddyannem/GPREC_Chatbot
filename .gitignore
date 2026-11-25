@@ -49,6 +49,7 @@ htmlcov/
 .pptx-build/
 deliverables/
 scratch/
+deploy/bundle/
 
 
 # Editor / IDE configs

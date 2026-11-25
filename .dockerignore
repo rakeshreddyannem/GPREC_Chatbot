@@ -1,24 +1,39 @@
-# Ignore local virtual environment and caches
-.venv/
-env/
-venv/
+# Version control and environment
+.git/
+.gitignore
+.gitattributes
+.env
+.env.*
+!.env.example
+
+# Python caches and virtual environments
 __pycache__/
 *.py[cod]
 *$py.class
+.venv/
+env/
+venv/
+ENV/
+
+# Automated tests and coverage
+tests/
 .pytest_cache/
 .coverage
 htmlcov/
+pytest.ini
 
-# Ignore git files
-.git/
-.gitignore
-
-# Ignore scratch / dev reports / temp artifacts
-.pptx-build/
+# Documentation, screenshots, and presentation builds
+docs/
 deliverables/
+.pptx-build/
 scratch/
-reports/crawl_report_*.json
+*.md.bak
 
-# Ignore backup databases (keep main gprec_knowledge.db)
+# Database backups and temporary files
 *.bak
 *.db.bak
+*.sqlite.bak
+reports/crawl_report_*.json
+
+# Local deploy output artifacts
+deploy/bundle/

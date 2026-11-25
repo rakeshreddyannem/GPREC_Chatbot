@@ -1,0 +1,5 @@
+# Development, testing, and offline crawling/PDF ingestion dependencies
+pytest==9.1.1
+pytesseract==0.3.13
+pymupdf==1.28.2
+tqdm==4.70.1

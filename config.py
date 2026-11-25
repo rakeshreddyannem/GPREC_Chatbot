@@ -2,15 +2,15 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from .env if present
-load_dotenv(override=True)
+# Load environment variables from .env if present (do not overwrite existing OS/Cloud environment variables)
+load_dotenv(override=False)
 
 # Also sync Streamlit cloud secrets into os.environ if running on Streamlit Cloud
 try:
     import streamlit as st
     if hasattr(st, "secrets"):
         for k, v in st.secrets.items():
-            if isinstance(v, str) and k not in os.environ:
+            if isinstance(v, str) and (k not in os.environ or not os.environ[k]):
                 os.environ[k] = v
 except Exception:
     pass

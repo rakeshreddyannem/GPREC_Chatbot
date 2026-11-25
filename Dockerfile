@@ -1,35 +1,65 @@
-# Multi-stage / lightweight Python 3.10 image for GPREC Chatbot
-FROM python:3.10-slim
+# Lightweight Python 3.11 slim base for Hugging Face Space deployment
+FROM python:3.11-slim
 
-# Prevent Python from writing .pyc files and enable unbuffered output
+# Prevent Python from writing bytecode and enable immediate output flushing
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive \
+    HF_HOME=/home/appuser/.cache/huggingface \
+    PORT=7860
+
+# Install minimal OS dependencies:
+# - curl: needed for container healthcheck
+# - libgomp1: OpenMP runtime needed by PyTorch and FAISS on Debian slim
+# Note: tesseract-ocr is excluded because OCR is only used in offline crawling/PDF ingest, not at runtime.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user (UID 1000 standard for Hugging Face Spaces)
+RUN useradd -m -u 1000 appuser && \
+    mkdir -p /app /home/appuser/.cache/huggingface && \
+    chown -R appuser:appuser /home/appuser /app
 
 WORKDIR /app
 
-# Install minimal OS dependencies for building packages & OCR (if needed)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    tesseract-ocr \
-    && rm -rf /var/lib/apt/lists/*
-
-# Pre-install CPU-only PyTorch to keep the image lightweight (saves ~1.5GB compared to CUDA PyTorch)
+# Pre-install CPU-only PyTorch build to keep image lightweight (saves ~1.5GB vs CUDA build)
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 
-# Install Python requirements
+# Install pinned runtime Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application files and pre-indexed knowledge base / vector store
-COPY . .
+# Pre-download the sentence-transformers model during image build
+# This ensures the first user query responds instantly without downloading weights at runtime
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
-# Expose standard Streamlit port
-EXPOSE 8501
+# Copy application code, pre-computed vectorstore, database, and UI assets
+COPY --chown=appuser:appuser . .
 
-# Streamlit healthcheck
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
+# Ensure app directory permissions are owned by non-root user
+RUN chown -R appuser:appuser /app /home/appuser
 
-# Launch Streamlit bound to all interfaces
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
+# Switch to non-root user for secure execution
+USER appuser
+
+# Hugging Face Spaces requires exposing port 7860
+EXPOSE 7860
+
+# Built-in Streamlit healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl --fail http://localhost:7860/_stcore/health || exit 1
+
+# Start command with detailed flag explanations:
+# --server.port 7860: Hugging Face Spaces routes inbound external traffic specifically to port 7860
+# --server.address 0.0.0.0: Binds to all network interfaces so traffic from outside the container can reach Streamlit
+# --server.headless true: Disables attempting to launch an OS GUI browser window on container startup
+# --server.enableCORS false: Disables CORS checks so the app can be embedded safely in Hugging Face iframes and proxy domains
+# --server.enableXsrfProtection false: Disables XSRF cookie verification which often fails across reverse proxies and websocket handshakes in Hugging Face Spaces
+ENTRYPOINT ["streamlit", "run", "app.py", \
+    "--server.port", "7860", \
+    "--server.address", "0.0.0.0", \
+    "--server.headless", "true", \
+    "--server.enableCORS", "false", \
+    "--server.enableXsrfProtection", "false"]

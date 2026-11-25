@@ -1,0 +1,13 @@
+# Git LFS tracking for database, index, metadata, and large assets (>5 MB)
+*.db filter=lfs diff=lfs merge=lfs -text
+*.bin filter=lfs diff=lfs merge=lfs -text
+*.pkl filter=lfs diff=lfs merge=lfs -text
+gprec_knowledge.db filter=lfs diff=lfs merge=lfs -text
+vectorstore/faiss_index.bin filter=lfs diff=lfs merge=lfs -text
+vectorstore/metadata.pkl filter=lfs diff=lfs merge=lfs -text
+
+# Large images and document binaries
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+*.pdf filter=lfs diff=lfs merge=lfs -text

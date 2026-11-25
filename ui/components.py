@@ -880,26 +880,34 @@ def render_subject_assistance_fragment(pipeline, db):
 
             # Process active query (single turn, renders once and appends to history)
             if active_doubt:
-                history.append({"role": "user", "content": active_doubt})
-                with st.chat_message("user"):
-                    st.markdown(active_doubt)
-                with st.chat_message("assistant"):
-                    with st.spinner("Preparing your explanation..."):
-                        client = getattr(pipeline, "client", None)
-                        model_name = getattr(pipeline, "model_name", None)
-                        ans = answer_subject_doubt(
-                            active_doubt,
-                            resolved_title,
-                            units_data=units_data,
-                            history=history[:-1],
-                            client=client,
-                            model_name=model_name,
-                            db=db,
-                            branch=selected_branch,
-                            scheme=selected_scheme
-                        )
-                    st.markdown(ans)
-                history.append({"role": "assistant", "content": ans})
+                from app import check_rate_limit, record_question_timestamp
+                allowed, limit_msg = check_rate_limit()
+                if not allowed:
+                    st.warning(limit_msg)
+                else:
+                    record_question_timestamp()
+                    history.append({"role": "user", "content": active_doubt})
+                    with st.chat_message("user"):
+                        st.markdown(active_doubt)
+                    with st.chat_message("assistant"):
+                        with st.spinner("Preparing your explanation..."):
+                            client = getattr(pipeline, "client", None)
+                            model_name = getattr(pipeline, "model_name", None)
+                            ans = answer_subject_doubt(
+                                active_doubt,
+                                resolved_title,
+                                units_data=units_data,
+                                history=history[:-1],
+                                client=client,
+                                model_name=model_name,
+                                db=db,
+                                branch=selected_branch,
+                                scheme=selected_scheme
+                            )
+                        st.markdown(ans)
+                    history.append({"role": "assistant", "content": ans})
+                    if db:
+                        db.log_chat(query=active_doubt, response=ans, response_type="SUBJECT_ASSIST", confidence="High")
 
             # Option to clear conversation for this subject
             if history:

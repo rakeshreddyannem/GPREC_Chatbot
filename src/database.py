@@ -3,19 +3,24 @@ import sqlite3
 import json
 import re
 import difflib
+import logging
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import config
 
+logger = logging.getLogger(__name__)
+
 
 class DatabaseManager:
     _initialized_paths = set()
 
-    def __init__(self, db_path: Optional[Path] = None, force_init: bool = False):
-        self.db_path = db_path or config.DB_PATH
-        resolved_key = str(Path(self.db_path).resolve())
+    def __init__(self, db_path: Optional[Path] = None, force_init: bool = False, require_exists: bool = False):
+        self.db_path = Path(db_path or config.DB_PATH)
+        if require_exists and (not self.db_path.exists() or self.db_path.stat().st_size == 0):
+            raise FileNotFoundError(f"Database file missing or empty at: {self.db_path}")
+        resolved_key = str(self.db_path.resolve())
         if force_init or resolved_key not in DatabaseManager._initialized_paths:
             self.init_db()
             DatabaseManager._initialized_paths.add(resolved_key)
@@ -300,6 +305,19 @@ class DatabaseManager:
                 )
             """)
 
+            # 15. Chat Logs Table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS chat_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT,
+                    user_query TEXT,
+                    response_text TEXT,
+                    response_type TEXT,
+                    confidence TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
             try:
                 cursor.execute("ALTER TABLE syllabus_sources ADD COLUMN content_hash TEXT")
             except Exception:
@@ -317,6 +335,7 @@ class DatabaseManager:
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_syllabus_sources_status ON syllabus_sources(status)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_syllabus_upsert_lookup ON syllabus(branch, regulation, course_code, unit_number)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_timetable_lookup ON timetable_subjects(branch, semester, course_code)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_logs_timestamp ON chat_logs(timestamp)")
             except Exception:
                 pass
 
@@ -363,16 +382,20 @@ class DatabaseManager:
             except Exception:
                 pass
 
-            conn.commit()
+            try:
+                conn.commit()
+            except Exception as e:
+                logger.warning(f"Failed to commit database table migrations (read-mostly mode): {e}")
 
-        # One-time cleanup for old seeded demo rows
-        self._cleanup_old_seed()
-
-        # Seed curated acronyms, entity directory, verified facts, and default notices
-        self._seed_curated_acronyms()
-        self._seed_verified_facts()
-        self._seed_entity_directory()
-        self._seed_default_notices()
+        # Seeding and cleanup: wrap in try-except so read-only/reset disks don't crash
+        try:
+            self._cleanup_old_seed()
+            self._seed_curated_acronyms()
+            self._seed_verified_facts()
+            self._seed_entity_directory()
+            self._seed_default_notices()
+        except Exception as e:
+            logger.warning(f"Database seed initialization skipped (read-mostly mode): {e}")
 
     def _cleanup_old_seed(self):
         """One-time cleanup: deletes any rows whose source is the old demo seed."""
@@ -1526,24 +1549,31 @@ class DatabaseManager:
     def get_cached_answer(self, normalized_query: str) -> Optional[Dict[str, Any]]:
         """Retrieves cached response if present and younger than 24 hours (86400 seconds)."""
         import time
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT response_json, created_at FROM answer_cache WHERE normalized_query = ?", (normalized_query,))
-            row = cursor.fetchone()
-            if not row:
-                return None
-            now = time.time()
-            if now - float(row["created_at"]) > 86400.0:
-                # Expired after 24h
-                cursor.execute("DELETE FROM answer_cache WHERE normalized_query = ?", (normalized_query,))
-                conn.commit()
-                return None
-            try:
-                data = json.loads(row["response_json"])
-                data["from_cache"] = True
-                return data
-            except Exception:
-                return None
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT response_json, created_at FROM answer_cache WHERE normalized_query = ?", (normalized_query,))
+                row = cursor.fetchone()
+                if not row:
+                    return None
+                now = time.time()
+                if now - float(row["created_at"]) > 86400.0:
+                    # Expired after 24h
+                    try:
+                        cursor.execute("DELETE FROM answer_cache WHERE normalized_query = ?", (normalized_query,))
+                        conn.commit()
+                    except Exception as de:
+                        logger.warning(f"Failed to delete expired cache entry (ignored): {de}")
+                    return None
+                try:
+                    data = json.loads(row["response_json"])
+                    data["from_cache"] = True
+                    return data
+                except Exception:
+                    return None
+        except Exception as e:
+            logger.warning(f"Failed to read from answer_cache (ignored): {e}")
+            return None
 
     def set_cached_answer(self, normalized_query: str, response: Dict[str, Any], created_at: Optional[float] = None) -> None:
         """Stores response in cache if response_type is not NOT_FOUND or CLARIFY."""
@@ -1554,23 +1584,30 @@ class DatabaseManager:
         timestamp = created_at if created_at is not None else time.time()
         # Clean response dict of non-serializable fields if any
         clean_resp = {k: v for k, v in response.items() if k not in ("timings",)}
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT OR REPLACE INTO answer_cache (normalized_query, response_json, created_at)
-                VALUES (?, ?, ?)
-            """, (normalized_query, json.dumps(clean_resp), timestamp))
-            conn.commit()
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT OR REPLACE INTO answer_cache (normalized_query, response_json, created_at)
+                    VALUES (?, ?, ?)
+                """, (normalized_query, json.dumps(clean_resp), timestamp))
+                conn.commit()
+        except Exception as e:
+            logger.warning(f"Failed to write to answer_cache (disk read-only/reset mode): {e}")
 
     def clear_answer_cache(self) -> int:
         """Clears all answers in the SQLite answer cache and returns count of rows deleted."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM answer_cache")
-            count = cursor.fetchone()[0]
-            cursor.execute("DELETE FROM answer_cache")
-            conn.commit()
-            return count
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM answer_cache")
+                count = cursor.fetchone()[0]
+                cursor.execute("DELETE FROM answer_cache")
+                conn.commit()
+                return count
+        except Exception as e:
+            logger.warning(f"Failed to clear answer_cache (ignored): {e}")
+            return 0
 
     # --- Syllabus Search for Study Mode ---
 
@@ -2261,28 +2298,97 @@ class DatabaseManager:
         message_idx: int = 0, 
         session_id: str = "",
         feedback_text: str = ""
-    ) -> int:
-        """Saves user rating (+1 or -1) and feedback for a generated response."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO feedback (session_id, message_idx, question, answer, rating, feedback_text)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (session_id, message_idx, question, answer, rating, feedback_text))
-            conn.commit()
-            return cursor.lastrowid
+    ) -> Optional[int]:
+        """Saves user rating (+1 or -1) and feedback for a generated response without crashing if disk is reset/read-only."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO feedback (session_id, message_idx, question, answer, rating, feedback_text)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (session_id, message_idx, question, answer, rating, feedback_text))
+                conn.commit()
+                return cursor.lastrowid
+        except Exception as e:
+            logger.warning(f"Failed to save feedback to database (read-mostly/disk-reset mode): {e}")
+            return None
+
+    def log_chat(
+        self,
+        query: str,
+        response: str,
+        response_type: str = "ANSWERED",
+        confidence: str = "High",
+        session_id: str = ""
+    ) -> Optional[int]:
+        """Safely logs a chat interaction without crashing if disk is reset or read-only."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO chat_logs (session_id, user_query, response_text, response_type, confidence)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (session_id, query, response, response_type, confidence))
+                conn.commit()
+                return cursor.lastrowid
+        except Exception as e:
+            logger.warning(f"Failed to log chat interaction (disk read-only/reset mode): {e}")
+            return None
+
+    def get_last_data_update_date(self) -> str:
+        """Returns the most recent data update date from crawl reports, notices, or documents."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                # 1. Check latest crawl report timestamp
+                cursor.execute("SELECT timestamp FROM crawl_reports ORDER BY report_id DESC LIMIT 1")
+                row = cursor.fetchone()
+                if row and row[0]:
+                    dt_str = str(row[0])
+                    try:
+                        from datetime import datetime
+                        dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+                        return dt.strftime("%B %d, %Y")
+                    except Exception:
+                        return dt_str[:10]
+
+                # 2. Check notices published date
+                cursor.execute("SELECT MAX(published_date) FROM notices WHERE published_date IS NOT NULL AND published_date != ''")
+                row = cursor.fetchone()
+                if row and row[0]:
+                    dt_str = str(row[0])
+                    try:
+                        from datetime import datetime
+                        dt = datetime.fromisoformat(dt_str)
+                        return dt.strftime("%B %d, %Y")
+                    except Exception:
+                        return dt_str[:10]
+
+                # 3. Check pages last checked
+                cursor.execute("SELECT MAX(last_checked) FROM pages WHERE last_checked IS NOT NULL AND last_checked != ''")
+                row = cursor.fetchone()
+                if row and row[0]:
+                    return str(row[0])[:10]
+        except Exception as e:
+            logger.warning(f"Could not retrieve last data update date: {e}")
+        return "October 2026"
 
     def get_feedback_count(self) -> Dict[str, int]:
         """Returns aggregate positive and negative feedback counts."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT rating, COUNT(*) as cnt FROM feedback GROUP BY rating")
-            counts = {1: 0, -1: 0}
-            for row in cursor.fetchall():
-                counts[row["rating"]] = row["cnt"]
-            return counts
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT rating, COUNT(*) as cnt FROM feedback GROUP BY rating")
+                counts = {1: 0, -1: 0}
+                for row in cursor.fetchall():
+                    counts[row["rating"]] = row["cnt"]
+                return counts
+        except Exception as e:
+            logger.warning(f"Failed to get feedback counts: {e}")
+            return {1: 0, -1: 0}
 
 
 if __name__ == "__main__":
     db = DatabaseManager()
     print("Database initialized successfully at:", db.db_path)
+    print("Last update date:", db.get_last_data_update_date())
