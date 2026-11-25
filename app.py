@@ -280,7 +280,30 @@ def render_syllabus_units(matched_syllabus, key_prefix="syl"):
     if doc_url:
         st.link_button(f"Open: {course_name} Syllabus", doc_url, key=f"{key_prefix}_doc")
 
+def ensure_data_files():
+    """Extracts compressed knowledge base assets if uncompressed files are missing."""
+    db_file = Path(config.DB_PATH)
+    idx_file = Path(config.FAISS_INDEX_PATH)
+    meta_file = Path(config.FAISS_METADATA_PATH)
+
+    # 1. Database auto-extraction
+    db_gz = db_file.with_name("gprec_knowledge.db.gz")
+    if (not db_file.exists() or db_file.stat().st_size == 0) and db_gz.exists():
+        import gzip, shutil
+        with gzip.open(db_gz, "rb") as f_in, open(db_file, "wb") as f_out:
+            shutil.copyfileobj(f_in, f_out)
+
+    # 2. Vectorstore metadata auto-extraction
+    meta_gz = meta_file.with_name("metadata.pkl.gz")
+    if (not meta_file.exists() or meta_file.stat().st_size == 0) and meta_gz.exists():
+        import gzip, shutil
+        with gzip.open(meta_gz, "rb") as f_in, open(meta_file, "wb") as f_out:
+            shutil.copyfileobj(f_in, f_out)
+
 def main():
+    # Ensure data assets are ready before health check or page load
+    ensure_data_files()
+
     # 0. Fast health check endpoint (probed by Docker / container orchestrator)
     if st.query_params.get("healthz") == "1":
         db_file = Path(config.DB_PATH)

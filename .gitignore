@@ -14,13 +14,14 @@ ENV/
 dist/
 build/
 
-# SQLite Databases & large binaries
+# SQLite Databases & large binaries (uncompressed >100MB ignored, compressed <100MB tracked)
 *.db
 *.sqlite
 *.sqlite3
 *.bak
 *.db.bak
 gprec_knowledge.db
+!gprec_knowledge.db.gz
 
 # Data directories (preserve directory structure via .gitkeep)
 data/website/*
@@ -34,9 +35,11 @@ data/syllabus/*
 !data/processed/.gitkeep
 !data/syllabus/.gitkeep
 
-# Vector store & temporary reports
+# Vector store & temporary reports (uncompressed metadata >100MB ignored, compressed <100MB tracked)
 vectorstore/*
 !vectorstore/.gitkeep
+!vectorstore/faiss_index.bin
+!vectorstore/metadata.pkl.gz
 reports/*
 !reports/.gitkeep
 
