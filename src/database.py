@@ -2262,31 +2262,32 @@ class DatabaseManager:
                     "needs_review": r.get("needs_review", 0)
                 })
 
-            # B. Remaining syllabus subjects for this semester
-            for sc in syl_courses:
-                c_code = (sc.get("course_code") or "").strip()
-                c_title = (sc.get("course_title") or "").strip()
-                norm_title = normalize_title(c_title)
+            # B. If no timetable entries exist for this semester, fall back to syllabus subjects
+            if not combined:
+                for sc in syl_courses:
+                    c_code = (sc.get("course_code") or "").strip()
+                    c_title = (sc.get("course_title") or "").strip()
+                    norm_title = normalize_title(c_title)
 
-                if c_code and c_code.upper() in seen_codes:
-                    continue
-                if norm_title and norm_title in seen_titles:
-                    continue
+                    if c_code and c_code.upper() in seen_codes:
+                        continue
+                    if norm_title and norm_title in seen_titles:
+                        continue
 
-                label_code = f"{c_code} - " if c_code else ""
-                display_label = f"{label_code}{c_title}"
+                    label_code = f"{c_code} - " if c_code else ""
+                    display_label = f"{label_code}{c_title}"
 
-                combined.append({
-                    "course_code": c_code,
-                    "course_title": c_title,
-                    "credits": sc.get("credits", ""),
-                    "ltp": sc.get("ltp", ""),
-                    "document_url": sc.get("document_url", ""),
-                    "regulation": sc.get("regulation", scheme or ""),
-                    "is_running": False,
-                    "display_label": display_label,
-                    "needs_review": sc.get("needs_review", 0)
-                })
+                    combined.append({
+                        "course_code": c_code,
+                        "course_title": c_title,
+                        "credits": sc.get("credits", ""),
+                        "ltp": sc.get("ltp", ""),
+                        "document_url": sc.get("document_url", ""),
+                        "regulation": sc.get("regulation", scheme or ""),
+                        "is_running": False,
+                        "display_label": display_label,
+                        "needs_review": sc.get("needs_review", 0)
+                    })
 
             return combined
 

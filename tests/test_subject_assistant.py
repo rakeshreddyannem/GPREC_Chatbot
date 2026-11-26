@@ -21,7 +21,9 @@ from src.subject_assistant import (
     build_practice_prompt,
     build_quick_revision_prompt,
     answer_subject_doubt,
-    clean_subject_response
+    clean_subject_response,
+    extract_mcq_json,
+    generate_subject_mcqs
 )
 
 
@@ -304,18 +306,18 @@ AI explanation. Verify important results with your textbook.
 # 10. ALL 10 DEPARTMENTS PRESENT IN CONFIGS AND DATABASE
 # ---------------------------------------------------------------------------
 
-def test_all_10_departments_present():
-    """All 10 canonical engineering departments must be present in DEPARTMENT_CONFIGS."""
+def test_all_departments_present():
+    """All active college departments from timetables must be present in DEPARTMENT_CONFIGS."""
     from src.faculty_parser import DEPARTMENT_CONFIGS
     dept_codes = [d["short_code"] for d in DEPARTMENT_CONFIGS]
-    expected_10 = ["CE", "CSE", "EEE", "ECE", "ME", "H&S", "CSM", "CSD", "CSB", "CST"]
-    for code in expected_10:
+    expected_depts = ["CE", "CSE", "EEE", "ECE", "ME", "H&S", "CSM"]
+    for code in expected_depts:
         assert code in dept_codes, f"Expected {code} in DEPARTMENT_CONFIGS"
-    assert len(DEPARTMENT_CONFIGS) == 10
+    assert len(DEPARTMENT_CONFIGS) == 7
 
     db = DatabaseManager()
     branches = db.get_syllabus_branches()
-    for code in expected_10:
+    for code in ["CE", "CSE", "EEE", "ECE", "ME", "CSM"]:
         assert code in branches, f"Expected {code} in get_syllabus_branches()"
 
 
@@ -393,5 +395,105 @@ def test_timetable_subjects_ordered_first_with_marker():
     running_labels = [s["display_label"] for s in subjects if s["is_running"]]
     for label in running_labels:
         assert "[Running this semester]" in label
+
+
+# ---------------------------------------------------------------------------
+# 14. MCQ JSON EXTRACTION AND PARSING ROBUSTNESS
+# ---------------------------------------------------------------------------
+
+def test_extract_mcq_json_robustness():
+    """Verify extract_mcq_json handles code blocks, bare arrays, LaTeX escapes, and trailing commas."""
+    # 1. Standard markdown fenced code block
+    fenced_output = """Here are the questions:
+```json
+[
+  {
+    "question_number": 1,
+    "question": "What is an object in Java?",
+    "options": {"A": "Instance of class", "B": "Primitive type", "C": "Method", "D": "Package"},
+    "correct_option": "A",
+    "explanation": "An object is an instance of a class."
+  }
+]
+```
+Verified against textbook."""
+    mcqs = extract_mcq_json(fenced_output)
+    assert mcqs is not None
+    assert len(mcqs) == 1
+    assert mcqs[0]["question_number"] == 1
+    assert mcqs[0]["correct_option"] == "A"
+
+    # 2. Bare array with trailing comma and unescaped LaTeX backslashes
+    bare_with_latex = r"""[
+  {
+    "question_number": 1,
+    "question": "Evaluate \frac{a}{b} where \alpha = 1 and \{x\} is set",
+    "options": {"A": "Choice A", "B": "Choice B", "C": "Choice C", "D": "Choice D"},
+    "correct_option": "Option B",
+    "explanation": "Derived using formula \beta.",
+  }
+]"""
+    mcqs_latex = extract_mcq_json(bare_with_latex)
+    assert mcqs_latex is not None
+    assert len(mcqs_latex) == 1
+    assert mcqs_latex[0]["correct_option"] == "B"
+
+    # 3. Model thought/scratchpad without JSON returns None
+    scratchpad_only = """We need to generate 5 multiple choice questions for Unit 1 of OOPJ.
+Let's craft:
+Question 1: Define class vs object.
+Question 2: Encapsulation.
+We'll ensure each includes at least one LaTeX expression."""
+    assert extract_mcq_json(scratchpad_only) is None
+
+
+# ---------------------------------------------------------------------------
+# 15. CLEAN SUBJECT RESPONSE STRIPS PRE-JSON REASONING
+# ---------------------------------------------------------------------------
+
+def test_clean_subject_response_strips_mcq_thinking():
+    """Verify that reasoning preambles before ```json blocks are cleanly stripped."""
+    leaked_mcq_reasoning = """We need to generate 5 multiple choice questions for Unit 1 of OOPJ (Object Oriented Programming Through Java).
+Let's craft 5 MCQs.
+```json
+[
+  {
+    "question_number": 1,
+    "question": "Which keyword instantiates an object in Java?",
+    "options": {"A": "new", "B": "create", "C": "make", "D": "alloc"},
+    "correct_option": "A",
+    "explanation": "The 'new' operator dynamically allocates memory on the heap."
+  }
+]
+```
+AI explanation. Verify important results with your textbook."""
+    cleaned = clean_subject_response(leaked_mcq_reasoning)
+    assert "We need to generate" not in cleaned
+    assert "Let's craft" not in cleaned
+    assert "```json" in cleaned
+    assert VERIFICATION_LINE in cleaned
+
+
+# ---------------------------------------------------------------------------
+# 16. SUBJECT-AWARE MCQ GENERATOR (JAVA/OOPJ AND OTHERS)
+# ---------------------------------------------------------------------------
+
+def test_generate_subject_mcqs_for_oopj_and_domain():
+    """Verify generate_subject_mcqs returns structured questions with A,B,C,D options and explanations."""
+    # Java / OOPJ
+    java_mcqs = generate_subject_mcqs("Object Oriented Programming Through Java (OOPJ)", "Unit 1: Introduction", count=5)
+    assert len(java_mcqs) == 5
+    for idx, q in enumerate(java_mcqs):
+        assert q["question_number"] == idx + 1
+        assert len(q["options"]) >= 4
+        assert set(q["options"].keys()) >= {"A", "B", "C", "D"}
+        assert q["correct_option"] in {"A", "B", "C", "D"}
+        assert len(q["explanation"]) > 5
+
+    # Data Structures
+    ds_mcqs = generate_subject_mcqs("Advanced Data Structures", "Unit 3: Balanced Trees", count=4)
+    assert len(ds_mcqs) == 4
+    assert any("avl" in q["question"].lower() or "heap" in q["question"].lower() or "tree" in q["question"].lower() for q in ds_mcqs)
+
 
 

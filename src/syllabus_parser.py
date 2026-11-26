@@ -46,7 +46,7 @@ class SyllabusParser:
         reg_match = re.search(r'\b(R[1-2][0-9])\b', text + url + link_text, re.IGNORECASE)
         regulation = reg_match.group(1).upper() if reg_match else "UNKNOWN"
         branch = "UNKNOWN"
-        for b in ["CSE", "ECE", "EEE", "ME", "CE", "CSM", "CSD", "CSB"]:
+        for b in ["CSE", "ECE", "EEE", "ME", "CE", "CSM"]:
             if re.search(r'\b' + b + r'\b', text + url + link_text, re.IGNORECASE):
                 branch = b
                 break
@@ -137,6 +137,34 @@ def clean_text(t: Optional[str]) -> Optional[str]:
     t = t.replace('–', '-').replace('—', '-').replace('\u2015', '-').replace('\u2013', '-').replace('\u2014', '-')
     t = t.strip()
     return t if t else None
+
+def extract_unit_outcome(full_outcomes: Optional[str], unit_num: Any = None) -> Optional[str]:
+    """Extracts only the Course Outcome corresponding to a specific unit (e.g. Unit 1 -> CO1)."""
+    if not full_outcomes or not str(full_outcomes).strip():
+        return None
+    if unit_num is None or str(unit_num).strip().lower() in ("", "none", "0"):
+        return full_outcomes.strip()
+    
+    pattern = rf'(?:^|[\s\n])(CO\s*{unit_num}\s*[:\-–—].*?)(?=(?:[\s\n]CO\s*\d\s*[:\-–—])|$)'
+    match = re.search(pattern, full_outcomes, re.IGNORECASE | re.DOTALL)
+    if match:
+        res = match.group(1).strip()
+        res = re.sub(r'[ \t]+', ' ', res)
+        return res.strip()
+    
+    num_pattern = rf'(?:^|[\s\n])({unit_num}[\.\)]\s*.*?)(?=(?:[\s\n]\d[\.\)])|$)'
+    match_num = re.search(num_pattern, full_outcomes, re.IGNORECASE | re.DOTALL)
+    if match_num and len(re.findall(r'(?:^|[\s\n])\d[\.\)]', full_outcomes)) > 1:
+        res = match_num.group(1).strip()
+        res = re.sub(r'[ \t]+', ' ', res)
+        return res.strip()
+
+    if re.match(r'^CO\s*\d\s*[:\-–—]', full_outcomes.strip(), re.IGNORECASE):
+        all_cos = re.findall(r'CO\s*\d\s*[:\-–—]', full_outcomes, re.IGNORECASE)
+        if len(all_cos) <= 1:
+            return full_outcomes.strip()
+            
+    return full_outcomes.strip()
 
 # --- 2. Link Classification ---
 
@@ -501,7 +529,7 @@ def parse_scheme_2023_layout(pdf_path: Path, doc_url: str, default_branch: str, 
                     "unit_title": u["unit_title"],
                     "topics": u["topics"],
                     "textbooks": textbooks,
-                    "outcomes": outcomes,
+                    "outcomes": extract_unit_outcome(outcomes, u["unit_number"]),
                     "exam_scheme": exam_scheme,
                     "document_url": doc_url,
                     "page_num": cinfo["page_num"],

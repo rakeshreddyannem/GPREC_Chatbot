@@ -53,6 +53,7 @@ htmlcov/
 deliverables/
 scratch/
 deploy/bundle/
+timetable_pdfs/
 
 
 # Editor / IDE configs

@@ -3,373 +3,253 @@
 This report details all subjects extracted from the timetable PDFs, organized per **Branch, Year, and Semester**, including matched syllabus course codes and review items.
 
 ## Summary Metrics
-- **Total Timetable Entries Extracted**: 281
-- **Syllabus Matched Entries**: 212
-- **Unmatched / Review Required**: 69
+- **Total Timetable Entries Extracted**: 173
+- **Syllabus Matched Entries**: 173
+- **Unmatched / Review Required**: 0
 
 ---
 
-### Branch: CE | Year: 1 | Semester: 1
+### Branch: CE | Year: 2 | Semester: 3
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Environmental Engineering | **CE209** | - | A | ENVIRONMENTAL ENGINEERING (EE) | ✅ Matched |
-| Strength | **-** | - | A | - | ⚠️ Unmatched |
-| Transportation Engineering | **CE211** | - | A | TRANSPORTATION ENGINEERING (TE) | ✅ Matched |
-| Hydraulics & Hydraulic Machinery | **CE212** | - | A | HYDRAULICS & HYDRAULIC MACHINERY (HHM) | ✅ Matched |
-| Managerial Economics & Principles | **-** | - | A | - | ⚠️ Unmatched |
-| Massive Open Online Courses | **-** | - | A | - | ⚠️ Unmatched |
-| Environmental Engineering | **CE209** | - | B | ENVIRONMENTAL ENGINEERING (EE) | ✅ Matched |
-| Strength | **-** | - | B | - | ⚠️ Unmatched |
-| Transportation Engineering | **CE211** | - | B | TRANSPORTATION ENGINEERING (TE) | ✅ Matched |
-| Hydraulics & Hydraulic Machinery | **CE212** | - | B | HYDRAULICS & HYDRAULIC MACHINERY (HHM) | ✅ Matched |
-| Managerial Economics & Principles | **-** | - | B | - | ⚠️ Unmatched |
-| Massive Open Online Courses | **-** | - | B | - | ⚠️ Unmatched |
-| Steel Structures Design & Drawing | **CE307** | - | A | STEEL STRUCTURES DESIGN & DRAWING (SSDD) | ✅ Matched |
-| Water Resources Engineering-II | **CE308** | - | A | WATER RESOURCES ENGINEERING-II (WRE2) | ✅ Matched |
-| Foundation Engineering | **CE309** | - | A | FOUNDATION ENGINEERING (FE) | ✅ Matched |
-| Open Elective - II | **-** | - | A | Open Elective-II | ⚠️ Unmatched |
-| Essence | **-** | - | A | - | ⚠️ Unmatched |
-| Steel Structures Design & Drawing | **CE307** | - | B | STEEL STRUCTURES DESIGN & DRAWING (SSDD) | ✅ Matched |
-| Water Resources Engineering-II | **CE308** | - | B | WATER RESOURCES ENGINEERING-II (WRE2) | ✅ Matched |
-| Foundation Engineering | **CE309** | - | B | FOUNDATION ENGINEERING (FE) | ✅ Matched |
-| Open Elective - II | **-** | - | B | Open Elective-II | ⚠️ Unmatched |
-| Essence | **-** | - | B | - | ⚠️ Unmatched |
-| Ground Improvement Techniques | **CE412** | - | B | GROUND IMPROVEMENT TECHNIQUES (GIT) | ✅ Matched |
-| Geological Science | **CE201** | - | A | GEOLOGICAL SCIENCE (GS) | ✅ Matched |
-| Strength | **-** | - | A | - | ⚠️ Unmatched |
-| Surveying | **CE203** | - | A | SURVEYING (SUR) | ✅ Matched |
-| Fluid Mechanics | **CE204** | - | A | FLUID MECHANICS (FM) | ✅ Matched |
-| Concrete Technology | **CE205** | - | A | CONCRETE TECHNOLOGY (CT) | ✅ Matched |
-| Constitution | **-** | - | A | - | ⚠️ Unmatched |
-| Geological Science | **CE201** | - | B | GEOLOGICAL SCIENCE (GS) | ✅ Matched |
-| Strength | **-** | - | B | - | ⚠️ Unmatched |
-| Surveying | **CE203** | - | B | SURVEYING (SUR) | ✅ Matched |
-| Fluid Mechanics | **CE204** | - | B | FLUID MECHANICS (FM) | ✅ Matched |
-| Concrete Technology | **CE205** | - | B | CONCRETE TECHNOLOGY (CT) | ✅ Matched |
-| Constitution | **-** | - | B | - | ⚠️ Unmatched |
-| Theory | **-** | - | - | - | ⚠️ Unmatched |
-| Advanced Structural Analysis | **CE317** | - | - | ADVANCED STRUCTURAL ANALYSIS (ASA) | ✅ Matched |
-| Theory | **-** | - | - | - | ⚠️ Unmatched |
+| Numerical and Statistical Methods (NSM) | **BS201** | Dr. K. Jyothi | A | - | ✅ Matched |
+| Strength of Materials (SM) | **CE202** | Dr. K. V. S. Gopala Krishna Sastry | A | - | ✅ Matched |
+| Surveying (SUR) | **CE203** | Dr. R. Sushmitha | A | - | ✅ Matched |
+| Fluid Mechanics (FM) | **CE204** | Sri Y. Yaswanth Kumar | A | - | ✅ Matched |
+| Strength of Materials Lab (SM (P)) | **CE206** | Dr. K. V. S. Gopala Krishna Sastry | A | - | ✅ Matched |
+| Surveying Lab (SUR (P)) | **CE207** | Dr. R. Sushmitha | A | - | ✅ Matched |
+| Building Planning and Drawing (BPD) | **CE208** | Dr. E. Ganesh | A | - | ✅ Matched |
+| Design Thinking & Innovation (DTI) | **ES201** | Sri K. Sudhakar Reddy, Dr. E. Sanjeeva Rayudu | A | - | ✅ Matched |
+| Universal Human Values (UHV) | **HSM201** | Ms. C. Balasai | A | - | ✅ Matched |
+| Massive Open Online Courses (MOOCs) | **MC105** | Ms. C. Balasai | A | - | ✅ Matched |
 
 ### Branch: CE | Year: 3 | Semester: 5
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Analysis | **-** | - | A | - | ⚠️ Unmatched |
-| Water Resources Engineering-I | **CE302** | - | A | WATER RESOURCES ENGINEERING-I (WRE1) | ✅ Matched |
-| Reinforced Concrete Design & Drawing | **CE303** | - | A | REINFORCED CONCRETE DESIGN & DRAWING (RCDD) | ✅ Matched |
-| Soil Mechanics | **CE304** | - | A | SOIL MECHANICS (SMECH) | ✅ Matched |
-| Professional Ethics | **MC104** | - | A | PROFESSIONAL ETHICS (PE) | ✅ Matched |
-| Analysis | **-** | - | B | - | ⚠️ Unmatched |
-| Water Resources Engineering-I | **CE302** | - | B | WATER RESOURCES ENGINEERING-I (WRE1) | ✅ Matched |
-| Reinforced Concrete Design & Drawing | **CE303** | - | B | REINFORCED CONCRETE DESIGN & DRAWING (RCDD) | ✅ Matched |
-| Soil Mechanics | **CE304** | - | B | SOIL MECHANICS (SMECH) | ✅ Matched |
-| Professional Ethics | **MC104** | - | B | PROFESSIONAL ETHICS (PE) | ✅ Matched |
+| Introduction to Quantum Technologies and Applications (IQTA) | **BS301** | Dr. Papori Seal | A | - | ✅ Matched |
+| Water Resources Engineering (WRE) | **CE301** | Dr. P. Lakshmi Sruthi | A | - | ✅ Matched |
+| Design of Reinforced Concrete Structures (DRCS) | **CE303** | Sri P. Eswanth | A | - | ✅ Matched |
+| Geotechnical Engineering (GTE) | **CE304** | Sri S. V. Garata Reddy | A | - | ✅ Matched |
+| Geotechnical Engineering Lab (GTE (P)) | **CE305** | Sri S. V. Garata Reddy | A | - | ✅ Matched |
+| Fluid Mechanics & Hydraulic Machines Lab (FM & HM (P)) | **CE306** | Sri Y. Yaswanth Kumar | A | - | ✅ Matched |
+| Estimation, Specifications, Costing & Valuation (ESCV) | **CE310** | Dr. K. V. Siva Krishna Reddy | A | - | ✅ Matched |
+| Advanced Structural Analysis (ASA) (PE-1) | **CE317** | Dr. T. Chandra Sekhara Reddy | A | - | ✅ Matched |
+| Intelligent Transportation Systems (ITS) | **CE321** | Dr. Sowjanya | Honors | - | ✅ Matched |
+| Water Supply Distribution System (WSDS) | **CE322** | Dr. K. Satish Kumar | Honors | - | ✅ Matched |
+| Geographical Information Systems Lab (GIS (P)) | **CE323** | Dr. K. Tharani | Honors | - | ✅ Matched |
+| Tinkering Lab (TL (P)) | **ESCM02** | Ms. N. G. Kalyani | A | - | ✅ Matched |
 
 ### Branch: CE | Year: 4 | Semester: 7
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Universal Human Values - II | **-** | - | B | UNIVERSAL HUMAN VALUES - II (UHV2) | ⚠️ Unmatched |
-| Universal Human Values - II | **-** | - | B | UNIVERSAL HUMAN VALUES - II (UHV2) | ⚠️ Unmatched |
+| Constitution of India (CI) | **AC402** | Dr. E. Ganesh | A | - | ✅ Matched |
+| Finite Element Methods (FEM) | **CE401** | Sri M. Santosh Kumar | A | - | ✅ Matched |
+| Project Management (PM) | **CE402** | Sri M. Hemanth Kumar | A | - | ✅ Matched |
+| Railway, Airports and Harbour Engineering (RAHE) (PE-IV) | **CE403** | Dr. Sowjanya | A | - | ✅ Matched |
+| Geographical Information Systems (GIS) (PE-V) | **CE404** | Ms. N. G. Kalyani | A | - | ✅ Matched |
+| Building Information Modelling Lab (BIM (P)) | **CE405** | Ms. C. Balasai | A | - | ✅ Matched |
+| Project Work (PW (P)) | **CE406** | Dr. T. Chandra Sekhara Reddy | A | - | ✅ Matched |
+| Advanced Design of Steel Structures (ADSS) | **CE411** | Dr. M. Deepak | Honors | - | ✅ Matched |
+| Open Elective - III (OE-III) | **OE401** | - | A | - | ✅ Matched |
+| Open Elective - IV (OE-IV) | **OE402** | - | A | - | ✅ Matched |
 
 ### Branch: CSE | Year: 2 | Semester: 3
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| ManagerialEconomics&FinancialAccountancy | **HSM202** | Sri K. Nagaiah | A | MANAGERIAL ECONOMICS AND FINANCIAL ANALYSIS (MEFA) | ✅ Matched |
-| Switching  Theory&LogicDesign | **CS201** | Smt W. Yasmeen | A | SWITCHING THEORY & LOGIC DESIGN (STLD) | ✅ Matched |
-| Advanced Data Structures | **CS202** | Dr. B.Santosh Kumar | A | ADVANCED DATA STRUCTURES (ADS) | ✅ Matched |
-| DatabaseSystems | **CS203** | Sri K. Bala Chowdappa | A | DATABASE SYSTEMS (DBS) | ✅ Matched |
-| ObjectOriented ProgrammingthroughJava | **CS204** | Dr.P. Penchala Prasad | A | OBJECT ORIENTED PROGRAMMING THROUGH JAVA (OOPJ) | ✅ Matched |
-| ConstitutionofIndia | **AC402** | Smt K. Sirisha | A | CONSTITUTION OF INDIA (COI) | ✅ Matched |
-| Soft Skills | **SCCM01** | - | A | SOFT SKILLS (SS) | ✅ Matched |
-| Extra Academic Activities | **-** | - | A | - | ⚠️ Unmatched |
-| Advanced Data StructuresLab | **CS202** | - | A | ADVANCED DATA STRUCTURES (ADS) | ✅ Matched |
-| DatabaseSystemsLab | **CS203** | - | A | DATABASE SYSTEMS (DBS) | ✅ Matched |
-| ObjectOriented ProgrammingthroughJavaLab | **CS204** | - | A | OBJECT ORIENTED PROGRAMMING THROUGH JAVA (OOPJ) | ✅ Matched |
-| ManagerialEconomics&FinancialAccountancy | **HSM202** | Dr.K. Aparna | B | MANAGERIAL ECONOMICS AND FINANCIAL ANALYSIS (MEFA) | ✅ Matched |
-| Switching  Theory&LogicDesign | **CS201** | Dr. S.Saheb Basha | B | SWITCHING THEORY & LOGIC DESIGN (STLD) | ✅ Matched |
-| Advanced Data Structures | **CS202** | Dr. N. Kasiviswanath | B | ADVANCED DATA STRUCTURES (ADS) | ✅ Matched |
-| DatabaseSystems | **CS203** | Smt P. Sri Lakshmi | B | DATABASE SYSTEMS (DBS) | ✅ Matched |
-| ObjectOriented ProgrammingthroughJava | **CS204** | Sri. B. Thimma Reddy | B | OBJECT ORIENTED PROGRAMMING THROUGH JAVA (OOPJ) | ✅ Matched |
-| ConstitutionofIndia | **AC402** | Sri. M Shashidhar | B | CONSTITUTION OF INDIA (COI) | ✅ Matched |
-| Soft Skills | **SCCM01** | - | B | SOFT SKILLS (SS) | ✅ Matched |
-| Extra Academic Activities | **-** | - | B | - | ⚠️ Unmatched |
-| Advanced Data StructuresLab | **CS202** | - | B | ADVANCED DATA STRUCTURES (ADS) | ✅ Matched |
-| DatabaseSystemsLab | **CS203** | - | B | DATABASE SYSTEMS (DBS) | ✅ Matched |
-| ObjectOriented ProgrammingthroughJavaLab | **CS204** | - | B | OBJECT ORIENTED PROGRAMMING THROUGH JAVA (OOPJ) | ✅ Matched |
-| ManagerialEconomics&FinancialAccountancy | **HSM202** | Dr.K. Aparna | C | MANAGERIAL ECONOMICS AND FINANCIAL ANALYSIS (MEFA) | ✅ Matched |
-| Switching  Theory&LogicDesign | **CS201** | Smt A. Parvathi | C | SWITCHING THEORY & LOGIC DESIGN (STLD) | ✅ Matched |
-| Advanced Data Structures | **CS202** | Dr. N. KasiViswanath | C | ADVANCED DATA STRUCTURES (ADS) | ✅ Matched |
-| DatabaseSystems | **CS203** | Smt L. Sudha Rani | C | DATABASE SYSTEMS (DBS) | ✅ Matched |
-| ObjectOriented ProgrammingthroughJava | **CS204** | Sri K.V. Rameshwar Reddy | C | OBJECT ORIENTED PROGRAMMING THROUGH JAVA (OOPJ) | ✅ Matched |
-| ConstitutionofIndia | **AC402** | Smt K. Sirisha | C | CONSTITUTION OF INDIA (COI) | ✅ Matched |
-| Soft Skills | **SCCM01** | - | C | SOFT SKILLS (SS) | ✅ Matched |
-| Extra Academic Activities | **-** | - | C | - | ⚠️ Unmatched |
-| Advanced Data StructuresLab | **CS202** | - | C | ADVANCED DATA STRUCTURES (ADS) | ✅ Matched |
-| DatabaseSystemsLab | **CS203** | - | C | DATABASE SYSTEMS (DBS) | ✅ Matched |
-| ObjectOriented ProgrammingthroughJavaLab | **CS204** | - | C | OBJECT ORIENTED PROGRAMMING THROUGH JAVA (OOPJ) | ✅ Matched |
+| Discrete Mathematics and Graph Theory (DMGT) | **BS203** | Smt. D. Sowmya | A | - | ✅ Matched |
+| Digital Logic and Computer Organization (DLCO) | **CS201** | D. Rohini | A | - | ✅ Matched |
+| Advanced Data Structures & Algorithm analysis (ADSA) | **CS202** | Dr. C. Sreedhar | A | - | ✅ Matched |
+| Object Oriented Programming through Java (OOPJ) | **CS205** | Dr. K. V. Rameswara Reddy | A | - | ✅ Matched |
+| Advanced Data Structures & Algorithm analysis lab (ADSA (P)) | **CS206** | Dr. C. Sreedhar | A | - | ✅ Matched |
+| Object Oriented Programming through Java lab (OOPJ (P)) | **CS207** | Dr. K. V. Rameswara Reddy | A | - | ✅ Matched |
+| Managerial Economics & Financial Analysis (MEFA) | **HSM202** | Dr. K. Nagaiah | A | - | ✅ Matched |
+| Environmental Science (ES) | **MC101** | Dr. G. Ujwala | A | - | ✅ Matched |
+| Soft Skills (SS) | **MC103** | Smt. K. Swarna | A | - | ✅ Matched |
 
 ### Branch: CSE | Year: 3 | Semester: 5
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Data Communication and Computer Networks | **CS301** | Dr. C. Sreedhar | A | DATA COMMUNICATION AND COMPUTER NETWORKS (DCCN) | ✅ Matched |
-| Formal Languages & Automata Theory | **CS302** | Smt P. Sri Lakshmi | A | FORMAL LANGUAGES AND AUTOMATA THEORY (FLAT) | ✅ Matched |
-| Artificial Intelligence | **CS303** | Smt D. Sowmya | A | ARTIFICIAL INTELLIGENCE (AI) | ✅ Matched |
-| Object Oriented Analysis and Design | **CS311** | Smt P. Sunandha | A | OBJECT ORIENTED ANALYSIS AND DESIGN (OOAD) | ✅ Matched |
-| Open Elective-1 | **-** | - | A | Open Elective-II | ⚠️ Unmatched |
-| Professional Ethics | **MC104** | Ms. Z. Maheen | A | PROFESSIONAL ETHICS (PE) | ✅ Matched |
-| Data Communication and Computer Networks Lab | **CS301** | - | A | DATA COMMUNICATION AND COMPUTER NETWORKS (DCCN) | ✅ Matched |
-| Dr C. Sreedhar                   DLNP: Smt. D.L.N. Prasunna | **-** | - | A | - | ⚠️ Unmatched |
-| Artificial IntelligenceLab | **CM208** | - | A | ARTIFICIAL INTELLIGENCE LAB (AI(P)) | ✅ Matched |
-| Multimediaand Applications Lab | **SCCS02** | - | A | MULTIMEDIA AND APPLICATIONS LAB (MAA (P)) | ✅ Matched |
-| Data Communication and Computer Networks | **CS301** | Sri Dilip Kumar Reddy | B | DATA COMMUNICATION AND COMPUTER NETWORKS (DCCN) | ✅ Matched |
-| Formal Languages & Automata Theory | **CS302** | Dr. K. Isthaq Ahmed | B | FORMAL LANGUAGES AND AUTOMATA THEORY (FLAT) | ✅ Matched |
-| Artificial Intelligence | **CS303** | Sri J. Swamy Naik | B | ARTIFICIAL INTELLIGENCE (AI) | ✅ Matched |
-| Object Oriented Analysis and Design | **CS311** | Smt K. Gayathri | B | OBJECT ORIENTED ANALYSIS AND DESIGN (OOAD) | ✅ Matched |
-| Open Elective-1 | **-** | - | B | Open Elective-II | ⚠️ Unmatched |
-| Professional Ethics | **MC104** | Smt B Gayathri | B | PROFESSIONAL ETHICS (PE) | ✅ Matched |
-| Data Communication and Computer Networks Lab | **CS301** | - | B | DATA COMMUNICATION AND COMPUTER NETWORKS (DCCN) | ✅ Matched |
-| Artificial IntelligenceLab | **CM208** | - | B | ARTIFICIAL INTELLIGENCE LAB (AI(P)) | ✅ Matched |
-| Multimediaand Applications Lab | **SCCS02** | - | B | MULTIMEDIA AND APPLICATIONS LAB (MAA (P)) | ✅ Matched |
-| Data Communication and Computer Networks | **CS301** | - | C | DATA COMMUNICATION AND COMPUTER NETWORKS (DCCN) | ✅ Matched |
-| Formal Languages & Automata Theory | **CS302** | Sri P. Rama Rao | C | FORMAL LANGUAGES AND AUTOMATA THEORY (FLAT) | ✅ Matched |
-| Artificial Intelligence | **CS303** | Sri P. Praveen Yadav | C | ARTIFICIAL INTELLIGENCE (AI) | ✅ Matched |
-| Object Oriented Analysis and Design | **CS311** | Smt B. Swathi | C | OBJECT ORIENTED ANALYSIS AND DESIGN (OOAD) | ✅ Matched |
-| Open Elective-1 | **-** | - | C | Open Elective-II | ⚠️ Unmatched |
-| Professional Ethics | **MC104** | Sri M. Anand | C | PROFESSIONAL ETHICS (PE) | ✅ Matched |
-| Data Communication and Computer Networks Lab | **CS301** | - | C | DATA COMMUNICATION AND COMPUTER NETWORKS (DCCN) | ✅ Matched |
-| Dr C. Sreedhar YPSR: | **-** | Sri Y. Padma Srinath Reddy | C | - | ⚠️ Unmatched |
-| Artificial IntelligenceLab | **CM208** | - | C | ARTIFICIAL INTELLIGENCE LAB (AI(P)) | ✅ Matched |
-| Multimediaand Applications Lab | **SCCS02** | - | C | MULTIMEDIA AND APPLICATIONS LAB (MAA (P)) | ✅ Matched |
+| Introduction to Quantum Technologies and Applications (IQTA) | **BS301** | Smt. S. Shabana | A | - | ✅ Matched |
+| Automata Theory and Compiler Design (ATCD) | **CS301** | Dr. K. Ishthaq Ahamed | A | - | ✅ Matched |
+| Computer Networks (CN) | **CS302** | Dr. L. Sudha Rani | A | - | ✅ Matched |
+| Full Stack Development-1 (FSD-1) | **CS303** | Sri M. Raghavendra Reddy | A | - | ✅ Matched |
+| Introduction to Artificial Intelligence (IAI) | **CS304** | Sri C. V. Chakradhar | A | - | ✅ Matched |
+| Object Oriented Analysis and Design (OOAD) (PE-1) | **CS305** | Smt. M. Haritha | A | - | ✅ Matched |
+| Computer Network Lab (CN (P)) | **CS306** | Dr. L. Sudha Rani | A | - | ✅ Matched |
+| Introduction to Artificial Intelligence Lab (IAI (P)) | **CS307** | Sri C. V. Chakradhar | A | - | ✅ Matched |
+| Full Stack Development-1 Lab (FSD-1 (P)) | **CS308** | Sri M. Raghavendra Reddy | A | - | ✅ Matched |
+| Technical Paper Writing & IPR (TPW&IPR) | **MC106** | Dr. M. Veeresha | A | - | ✅ Matched |
 
 ### Branch: CSE | Year: 4 | Semester: 7
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Dr C.Sreedhar | **-** | - | A | - | ⚠️ Unmatched |
-| Dr K.Isthaq Ahmed | **-** | - | B | - | ⚠️ Unmatched |
+| Constitution of India (CI) | **AC402** | Sri Y. Mahanandi | A | - | ✅ Matched |
+| Agile Methodologies (AM) | **CS401** | Sri M. Anand | A | - | ✅ Matched |
+| Deep Learning (DL) | **CS402** | Dr. T. Murali Krishna | A | - | ✅ Matched |
+| Prompt Engineering (PE) | **CS403** | Smt. K. Sirisha | A | - | ✅ Matched |
+| Software Architecture and Design Patterns (SADP) | **CS404** | Smt. D. L. N. Prasunna | A | - | ✅ Matched |
+| Prompt Engineering Lab (PE (P)) | **CS405** | Smt. K. Sirisha | A | - | ✅ Matched |
+| Project Work Lab (PW (P)) | **CS406** | Dr. S. Zahoor Ul Huq | A | - | ✅ Matched |
+| Management Science (MS) | **HSM401** | Sri C. R. K. | A | - | ✅ Matched |
+| Open Elective - III (OE-III) | **OE401** | - | A | - | ✅ Matched |
+| Open Elective - IV (OE-IV) | **OE402** | - | A | - | ✅ Matched |
 
-### Branch: CST | Year: 2 | Semester: 3
+### Branch: CSM | Year: 2 | Semester: 3
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| ManagerialEconomics&FinancialAccountancy | **HSM202** | - | B | MANAGERIAL ECONOMICS AND FINANCIAL ANALYSIS (MEFA) | ✅ Matched |
-| Switching  Theory&LogicDesign | **CS201** | Sri K. Vijay Kumar | B | SWITCHING THEORY & LOGIC DESIGN (STLD) | ✅ Matched |
-| Advanced Data Structures | **CS202** | Sri P. Praveen Yadav | B | ADVANCED DATA STRUCTURES (ADS) | ✅ Matched |
-| DatabaseSystems | **CS203** | Dr. G. Rajeswarappa | B | DATABASE SYSTEMS (DBS) | ✅ Matched |
-| ObjectOriented ProgrammingthroughJava | **CS204** | Dr. S. Zahoor ul Haq | B | OBJECT ORIENTED PROGRAMMING THROUGH JAVA (OOPJ) | ✅ Matched |
-| ConstitutionofIndia | **MC201** | Ms. M. Dhana Lakshmi | B | CONSTITUTION OF INDIA (CI) | ✅ Matched |
-| Soft Skills | **SCCM01** | - | B | SOFT SKILLS (SS) | ✅ Matched |
-| Extra Academic Activities | **-** | - | B | - | ⚠️ Unmatched |
-| Advanced Data StructuresLab | **CS202** | - | B | ADVANCED DATA STRUCTURES (ADS) | ✅ Matched |
-| DatabaseSystemsLab | **CS206** | - | B | DATABASE SYSTEMS LAB (DBS (P)) | ✅ Matched |
-| ObjectOriented ProgrammingthroughJavaLab | **CS204** | - | B | OBJECT ORIENTED PROGRAMMING THROUGH JAVA (OOPJ) | ✅ Matched |
+| Discrete Mathematics & Graph Theory (DMGT) | **BS203** | Dr. V. Rangaveni | A | - | ✅ Matched |
+| Artificial Intelligence (AI) | **CM202** | Dr. J. Siva Ramakrishna | A | - | ✅ Matched |
+| Advanced Data Structures and Algorithms Lab (ADSA (P)) | **CM205** | Smt. B. Kiranmayee | A | - | ✅ Matched |
+| OOP Through Java Lab (OOPJ (P)) | **CM206** | Sri Y. Shiva Kumar | A | - | ✅ Matched |
+| Advanced Data Structures & Algorithms Analysis (ADSA) | **CS202** | Smt. B. Kiranmayee | A | - | ✅ Matched |
+| Object Oriented Programming Through Java (OOPJ) | **CS205** | Sri Y. Shiva Kumar | A | - | ✅ Matched |
+| Universal Human Values (UHV) | **HSM201** | Ms. I. Priyanka | A | - | ✅ Matched |
+| Environmental Science (ES) | **MC101** | Dr. P. Pavan Kumar | A | - | ✅ Matched |
+| Soft Skills (SS (P)) | **MC103** | Smt. K. Swarna | A | - | ✅ Matched |
 
-### Branch: CST | Year: 3 | Semester: 5
+### Branch: CSM | Year: 3 | Semester: 5
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Theory of Computations | **CT301** | Smt P. Sri Devi | B | THEORY OF COMPUTATION (TOC) | ✅ Matched |
-| Computer Networks | **CT302** | Smt D. Sowmya | B | COMPUTER NETWORKS (CN) | ✅ Matched |
-| Artificial Intelligence | **CS303** | Dr. G. Rajeswarappa | B | ARTIFICIAL INTELLIGENCE (AI) | ✅ Matched |
-| Object Oriented Analysis and Design | **CS313** | Smt L. Sudha Rani | B | OBJECT ORIENTED ANALYSIS AND DESIGN (OOAD) | ✅ Matched |
-| Open Elective-1 | **-** | - | B | Open Elective-II | ⚠️ Unmatched |
-| Professional Ethics | **MC104** | Smt B. Gayathri | B | PROFESSIONAL ETHICS (PE) | ✅ Matched |
-| Computer Networks Lab | **CT303** | - | B | COMPUTER NETWORKS LAB (CN(P)) | ✅ Matched |
-| Artificial IntelligenceLab | **CS305** | - | B | ARTIFICIAL INTELLIGENCE LAB (AI(P)) | ✅ Matched |
-| Multimediaand Applications Lab | **SCCS02** | - | B | MULTIMEDIA AND APPLICATIONS LAB (MAA (P)) | ✅ Matched |
+| Introduction to Quantum Technologies and Applications (IQTA) | **BS301** | Dr. M. Jahir Pasha | A | - | ✅ Matched |
+| Natural Language Processing (NLP) | **CM301** | Sri V. Suresh | A | - | ✅ Matched |
+| Operating Systems & System Programming (OSSP) | **CM302** | Dr. S. Shabana | A | - | ✅ Matched |
+| Computer Vision & Image Processing (CVIP) | **CM303** | Sri S. Md. Nadeem | A | - | ✅ Matched |
+| Data Visualization Techniques (DVT) (PE-I) | **CM304** | Sri G. K. Nagaraju | A | - | ✅ Matched |
+| Computer Vision & Machine Learning Lab (CVML (P)) | **CM305** | Sri S. Md. Nadeem | A | - | ✅ Matched |
+| AI & System Programming Lab (AISP (P)) | **CM306** | Dr. S. Shabana | A | - | ✅ Matched |
+| Full Stack Development-1 (FSD-1 (P)) | **CS303** | Dr. Abid Nayeemuddin M | A | - | ✅ Matched |
+| Technical Paper Writing & IPR (TPW&IPR) | **MC106** | Smt. M. Manasa | A | - | ✅ Matched |
+| Open Elective-I (OE-I) | **OE301** | - | A | - | ✅ Matched |
 
-### Branch: CST | Year: 4 | Semester: 7
+### Branch: CSM | Year: 4 | Semester: 7
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Dr G.Rajeswarappa | **-** | - | B | - | ⚠️ Unmatched |
-
-### Branch: ECE | Year: 1 | Semester: 1
-| Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| Massive Open Online Course(Digital Learning) | **-** | - | - | - | ⚠️ Unmatched |
-| Universal Human Values(UHV) | **HSM201** | - | - | UNIVERSAL HUMAN VALUES | ✅ Matched |
-| Universal Human Values-, -2 | **HSSC701** | - | - | UNIVERSAL HUMAN VALUES-2 (UHV-2) | ✅ Matched |
-| Practicals | **HSSC701** | - | - | UNIVERSAL HUMAN VALUES-2 (UHV-2) | ✅ Matched |
-| smsd | **-** | - | - | - | ⚠️ Unmatched |
-| Embedded System | **CS316** | - | - | EMBEDDED SYSTEMS (EBS) | ✅ Matched |
-| Audit Course - I | **-** | - | - | - | ⚠️ Unmatched |
-| Advanced VLSI Lab | **-** | - | - | - | ⚠️ Unmatched |
-| Advanced Embedded Systems Lab | **-** | - | - | - | ⚠️ Unmatched |
+| Constitution of India (CI) | **AC402** | N. Ruchitha | A | - | ✅ Matched |
+| Generative AI (GAI) | **CM401** | Dr. D. JayaNarayana Reddy | A | - | ✅ Matched |
+| AI-Driven Software Engineering & DevOps (AISED) (PE-IV) | **CM402** | Sri U. U. Veerendra | A | - | ✅ Matched |
+| MLOps & AI Model Deployment (MLOPS) (PE-V) | **CM403** | Smt. B. Sowjanya | A | - | ✅ Matched |
+| Project Work Lab (PW (P)) | **CM405** | Sri V. Suresh | A | - | ✅ Matched |
+| Prompt Engineering (PE (P)) | **CS403** | Sri P. Madhusudhan | A | - | ✅ Matched |
+| Management Science (MS) | **HSM401** | Smt. G. Alekhya | A | - | ✅ Matched |
+| Open Elective - III (OE-3) | **OE401** | - | A | - | ✅ Matched |
+| Open Elective - IV (OE-4) | **OE402** | - | A | - | ✅ Matched |
 
 ### Branch: ECE | Year: 2 | Semester: 3
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| ECE-1 | **-** | - | A | - | ⚠️ Unmatched |
-| Universal Human Values(UHV) | **HSM201** | - | A | UNIVERSAL HUMAN VALUES | ✅ Matched |
-| pcpk | **EC201** | - | A | DIGITAL SYSTEM DESIGN (DSD) | ✅ Matched |
-| ivrr | **EC203** | - | A | PROBABILITY THEORY AND STOCHASTIC PROCESSES (PTSP) | ✅ Matched |
-| Electronic Devices & Circuits Lab (EDC(P)) | **EC204** | - | A | ELECTRONIC DEVICES AND CIRCUITS LAB (EDC (P)) | ✅ Matched |
-| Digital System Design Lab (DSD(P)) | **EC205** | - | A | DIGITAL SYSTEM DESIGN LAB (DSD (P)) | ✅ Matched |
-| Basic Simulations Lab (BS(P)) | **EC206** | - | A | BASIC SIMULATION LAB (BS (P)) | ✅ Matched |
-| mvrv | **EC203** | - | B | PROBABILITY THEORY AND STOCHASTIC PROCESSES (PTSP) | ✅ Matched |
-| Electronic Devices & Circuits Lab (EDC(P)) | **EC204** | - | B | ELECTRONIC DEVICES AND CIRCUITS LAB (EDC (P)) | ✅ Matched |
-| Digital System Design Lab | **EC205** | - | B | DIGITAL SYSTEM DESIGN LAB (DSD (P)) | ✅ Matched |
-| Basic Simulations Lab (BS(P)) | **EC206** | - | B | BASIC SIMULATION LAB (BS (P)) | ✅ Matched |
+| Probability and Complex Variables (PCV) | **BS204** | Dr. M. Siva Sankara Reddy | A | - | ✅ Matched |
+| Signals, Systems and Stochastic Processes (SSSP) | **EC201** | Dr. S. Nagaraja Rao | A | - | ✅ Matched |
+| Electronic Devices and Circuits (EDC) | **EC202** | Dr. L. L. Prasanna Kumar | A | - | ✅ Matched |
+| Digital Circuits Design (DCD) | **EC203** | Sri B. Siva Reddy | A | - | ✅ Matched |
+| Electronic Devices and Circuits Lab (EDC (P)) | **EC204** | Dr. L. L. Prasanna Kumar | A | - | ✅ Matched |
+| Digital Circuits & Signal Simulation Lab (DCSS (P)) | **EC205** | Dr. M. Madhusudan Reddy | A | - | ✅ Matched |
+| Design Thinking and Innovation (DTI) | **ES201** | Sri K. Raju | A | - | ✅ Matched |
+| Universal Human Values (UHV) | **HSM201** | Smt. K. UdayaKiran | A | - | ✅ Matched |
+| Massive Open Online Course (Digital Learning) | **MC105** | Smt. K. UdayaKiran | A | - | ✅ Matched |
+| Python Programming (SEC-I) | **SCCM02** | Dr. R. Sudheer Babu | A | - | ✅ Matched |
 
 ### Branch: ECE | Year: 3 | Semester: 5
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Analog | **EC308** | - | - | LINEAR AND DIGITAL IC APPLICATIONS LAB (LDICA(P)) | ✅ Matched |
-| AICD | **-** | - | - | - | ⚠️ Unmatched |
-| ivrr | **EC302** | - | - | LINEAR AND DIGITAL IC APPLICATIONS (LDICA) | ✅ Matched |
-| llpk | **EC303** | - | - | ANTENNAS & WAVE PROPAGATION (AWP) | ✅ Matched |
-| avkr | **EE317** | - | - | LINEAR CONTROL SYSTEMS (LCS) | ✅ Matched |
-| jstt | **-** | - | - | - | ⚠️ Unmatched |
-| ivrr | **EC308** | - | - | LINEAR AND DIGITAL IC APPLICATIONS LAB (LDICA(P)) | ✅ Matched |
-| jstt | **EC303** | - | B | ANTENNAS & WAVE PROPAGATION (AWP) | ✅ Matched |
-| jstt | **-** | - | B | - | ⚠️ Unmatched |
-| smsd | **EC301** | - | - | MICROPROCESSORS AND MICROCONTROLLERS (MPMC) | ✅ Matched |
-| avkr | **EE317** | - | - | LINEAR CONTROL SYSTEMS (LCS) | ✅ Matched |
-| smsd | **EC307** | - | - | ANALOG AND DIGITAL CIRCUITS LAB (ADC (P)) | ✅ Matched |
+| Analog and Digital IC Applications (ADICA) | **EC301** | Dr. S. Vyshali | A | - | ✅ Matched |
+| Antennas & Wave Propagation (AWP) | **EC302** | Dr. M. V. R. Vittal | A | - | ✅ Matched |
+| Microprocessors and Microcontrollers (MPMC) | **EC303** | Dr. G. Ramesh | A | - | ✅ Matched |
+| Analog & Digital IC Applications Lab | **EC304** | Dr. S. Vyshali | A | - | ✅ Matched |
+| Microprocessors and Microcontrollers Lab | **EC305** | Dr. G. Ramesh | A | - | ✅ Matched |
+| Computer Architecture & Organization (CAO) (PE-I) | **EC311** | Smt. A. Parvathi | A | - | ✅ Matched |
+| Tinkering Lab | **ESCM02** | Smt. K. Udaya Kiran | A | - | ✅ Matched |
+| Introduction to Quantum Technologies and Applications (IQTA) | **ESCM03** | Dr. T. Swathi | A | - | ✅ Matched |
+| Open Elective-I (OE-1) | **OE301** | - | A | - | ✅ Matched |
+| PCB Design and Prototype Development (PCBPDP) (SEC-III) | **SCEC01** | Smt. K. Udaya Kiran | A | - | ✅ Matched |
 
 ### Branch: ECE | Year: 4 | Semester: 7
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Image Processing(Open Elective-IV) | **OE415** | - | - | IMAGE PROCESSING (IP) | ✅ Matched |
-| Universal Human Valu -2 | **-** | - | - | UNIVERSAL HUMAN VALUES - II (UHV2) | ⚠️ Unmatched |
-| Image Processing(Open Elective-IV) | **OE415** | - | - | IMAGE PROCESSING (IP) | ✅ Matched |
-| Universal Human Va-2 | **-** | - | - | UNIVERSAL HUMAN VALUES - II (UHV2) | ⚠️ Unmatched |
-| Image Processing(Open Elective-IV) | **OE415** | - | - | IMAGE PROCESSING (IP) | ✅ Matched |
-| Universal Human Va -2 | **-** | - | - | UNIVERSAL HUMAN VALUES - II (UHV2) | ⚠️ Unmatched |
+| Constitution of India (COI) (Audit Course) | **AC402** | Sri M. Devendra | A | - | ✅ Matched |
+| Data Communications and Networking (DCN) | **EC401** | Dr. T. Sarath Babu | A | - | ✅ Matched |
+| Digital Image Processing (DIP) (PE-IV) | **EC402** | Dr. P. Abdul Khayum | A | - | ✅ Matched |
+| Cellular & Mobile Communications (CMC) (PE-V) | **EC406** | Dr. G. V. R. Sagar | A | - | ✅ Matched |
+| Project Work (PW) | **EC407** | Dr. D. V. Srihari Babu | A | - | ✅ Matched |
+| Management Science (MS) | **HSM403** | Smt. G. Sai Shyama | A | - | ✅ Matched |
+| Open Elective - 3 (OE-3) | **OE401** | - | A | - | ✅ Matched |
+| Open Elective - 4 (OE-4) | **OE402** | - | A | - | ✅ Matched |
+| RF System Design tools (RFSDT (P)) (SEC-V) | **SCEC03** | Dr. J. Salai Thillai Thilagam | A | - | ✅ Matched |
 
 ### Branch: EEE | Year: 2 | Semester: 3
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Probability and Statistical Analysis | **BS202** | Dr. K. Subhashini | A | PROBABILITY AND STATISTICAL ANALYSIS (PSA) | ✅ Matched |
-| Analog Circuits | **EC212** | Sri K. Vijay Kumar | A | ANALOG CIRCUITS (AC) | ✅ Matched |
-| Digital System Design | **EC201** | Dr. G.V.R. Sagar | A | DIGITAL SYSTEM DESIGN (DSD) | ✅ Matched |
-| Electrical and Electronic Measuring Instruments | **EE202** | Dr. M. Siva Satyanarayana | A | ELECTRICAL & ELECTRONIC MEASURING INSTRUMENTS (EEMI) | ✅ Matched |
-| Introduction to Python Programming (SOC) | **SCEE01** | Dr. M. Abid Nayeemuddin | A | INTRODUCTION TO PYTHON PROGRAMMING (IPP) | ✅ Matched |
-| Professional Ethics (MLC-1) | **MC104** | Smt. B. Rajeshwari | A | PROFESSIONAL ETHICS (PE) | ✅ Matched |
-| Electrical Circuits Lab | **EE104** | Dr. G. Venkata Subba Reddy | A | ELECTRICAL CIRCUITS LAB (ECP) | ✅ Matched |
-| Basic Simulation Lab | **ME103** | Dr. M. Harsha Vardhan Reddy | A | BASIC SIMULATION LAB (BSL) | ✅ Matched |
-| Electrical Machines-1 | **EE201** | - | A | ELECTRICAL MACHINES-I (EMC-I) | ✅ Matched |
-| Electrical Measurements Lab | **EE205** | - | A | ELECTRICAL MEASUREMENTS LAB (EM (P)) | ✅ Matched |
-| Massive Open Online Course (Digital Learning) | **-** | - | A | - | ⚠️ Unmatched |
-| Probability and Statistical Analysis | **BS202** | Dr. M. Siva Sankar Reddy | B | PROBABILITY AND STATISTICAL ANALYSIS (PSA) | ✅ Matched |
-| Analog Circuits | **EC212** | Sri L. Lakshmi Prasanna Kumar | B | ANALOG CIRCUITS (AC) | ✅ Matched |
-| Digital System Design | **EC201** | Sri B. Siva Reddy | B | DIGITAL SYSTEM DESIGN (DSD) | ✅ Matched |
-| Electrical and Electronic Measuring Instruments | **EE202** | Dr. M. Siva Satyanarayana | B | ELECTRICAL & ELECTRONIC MEASURING INSTRUMENTS (EEMI) | ✅ Matched |
-| Introduction to Python Programming (SOC) | **SCEE01** | Dr. M. Abid Nayeemuddin | B | INTRODUCTION TO PYTHON PROGRAMMING (IPP) | ✅ Matched |
-| Professional Ethics (MLC-1) | **MC104** | Smt. B. Rajeshwari | B | PROFESSIONAL ETHICS (PE) | ✅ Matched |
-| Electrical Circuits Lab | **EE104** | Dr. C. Harinatha Reddy | B | ELECTRICAL CIRCUITS LAB (ECP) | ✅ Matched |
-| Basic Simulation Lab | **ME103** | Dr. G. Sreenivasa Reddy | B | BASIC SIMULATION LAB (BSL) | ✅ Matched |
-| Electrical Measurements Lab | **EE205** | Dr. M. Siva Satyanarayana | B | ELECTRICAL MEASUREMENTS LAB (EM (P)) | ✅ Matched |
-| Electrical Machines-1 | **EE201** | - | B | ELECTRICAL MACHINES-I (EMC-I) | ✅ Matched |
-| Massive Open Online Course (Digital Learning) | **-** | - | B | - | ⚠️ Unmatched |
-
-### Branch: EEE | Year: 2 | Semester: 4
-| Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| Control Systems Engineering | **EE206** | Dr. M. Abid Nayeemuddin | A | CONTROL SYSTEMS ENGINEERING (CSE) | ✅ Matched |
-| Power Systems - I | **EE206** | Dr. M. Siva Satyanarayana | A | POWER SYSTEMS-I (PS-I) | ✅ Matched |
-| Control Systems Lab | **EE210** | Dr. M. Abid Nayeemuddin | A | CONTROL SYSTEMS LAB (CS(P)) | ✅ Matched |
-| Analog & Digital Systems Lab | **EC214** | Smt. A. Parvathi | A | ANALOG AND DIGITIAL SYSTEMS LAB (ADS (P)) | ✅ Matched |
-| Soft Skills Lab | **SCCM01** | Smt. Y.Sumalatha | A | SOFT SKILLS LAB (SS(P)) | ✅ Matched |
-| Complex Variables & Numerical Methods | **BS205** | - | A | COMPLEX VARIABLES & NUMERICAL METHODS (CVNM) | ✅ Matched |
-| Electrical Machines – II | **EE208** | - | A | ELECTRICAL MACHINES-II (EMC-II) | ✅ Matched |
-| Managerial Economics & Principles of Accountancy | **HU201** | - | A | MANAGERIAL ECONOMICS AND PRINCIPLES OF ACCOUNTANCY (MEPA) | ✅ Matched |
-| Electrical Machines – I Lab | **EE201** | - | A | ELECTRICAL MACHINES-I (EMC-I) | ✅ Matched |
-| Massive Open Online Course (Digital Learning) | **-** | - | A | - | ⚠️ Unmatched |
-| Control Systems Engineering | **EE206** | Dr. G. Venkata Subba Reddy | B | CONTROL SYSTEMS ENGINEERING (CSE) | ✅ Matched |
-| Power Systems - I | **EE206** | Dr. M.Siva Satyanarayana | B | POWER SYSTEMS-I (PS-I) | ✅ Matched |
-| Control Systems Lab | **EE210** | Dr. G. Venkata Subba Reddy | B | CONTROL SYSTEMS LAB (CS(P)) | ✅ Matched |
-| Analog & Digital Systems Lab | **EC214** | Sri K. Rama Krishna | B | ANALOG AND DIGITIAL SYSTEMS LAB (ADS (P)) | ✅ Matched |
-| Soft Skills Lab | **SCCM01** | Smt. A. Jerusha | B | SOFT SKILLS LAB (SS(P)) | ✅ Matched |
-| Complex Variables & Numerical Methods | **BS205** | - | B | COMPLEX VARIABLES & NUMERICAL METHODS (CVNM) | ✅ Matched |
-| Electrical Machines – II | **EE208** | - | B | ELECTRICAL MACHINES-II (EMC-II) | ✅ Matched |
-| Managerial Economics & Principles of Accountancy | **HU201** | - | B | MANAGERIAL ECONOMICS AND PRINCIPLES OF ACCOUNTANCY (MEPA) | ✅ Matched |
-| Electrical Machines – I Lab | **EE201** | - | B | ELECTRICAL MACHINES-I (EMC-I) | ✅ Matched |
-| Massive Open Online Course (Digital Learning) | **-** | - | B | - | ⚠️ Unmatched |
+| Complex Variables & Numerical Methods (CVNM) | **BS205** | Dr. E. Kiran Babu | A | - | ✅ Matched |
+| Data Structures (SOC) (DS (P)) | **CS208** | Smt. P. Sunanda | A | - | ✅ Matched |
+| Electromagnetic Field Theory (EMF) | **EE201** | Dr. K. Rajesh | A | - | ✅ Matched |
+| Electrical Circuit Analysis-II (ECA-2) | **EE202** | Dr. K. Jagadeesh | A | - | ✅ Matched |
+| DC Machines & Transformers (DCMT) | **EE203** | Dr. V. Anantha Lakshmi | A | - | ✅ Matched |
+| Electrical Circuit Analysis-II and Simulation Lab (ECA2&S (P)) | **EE204** | Dr. K. Jagadeesh | A | - | ✅ Matched |
+| DC Machines & Transformers Lab (DCMT (P)) | **EE205** | Dr. V. Anantha Lakshmi | A | - | ✅ Matched |
+| Design Thinking & Innovation (DT&I) | **ES201** | Sri A. Vijaya Kumar Reddy | A | - | ✅ Matched |
+| Universal Human Values (UHV) | **HSM201** | Dr. N. Ravishankar Reddy | A | - | ✅ Matched |
+| Massive Open Online Course (Digital Learning) (MOOCS) | **MC105** | Sri A. Vijaya Kumar Reddy | A | - | ✅ Matched |
 
 ### Branch: EEE | Year: 3 | Semester: 5
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Power Electronics-1 | **EE301** | Dr. M. Harsha Vardhan Reddy | A | POWER ELECTRONICS-I (PEL1) | ✅ Matched |
-| Power System -II | **EE302** | Dr. G. Venkata Subba Reddy | A | POWER SYSTEMS - II (PS-II) | ✅ Matched |
-| Integrated Circuits and Microprocessors | **EC318** | Dr. A. Venkata Subba Reddy | A | INTEGRATED CIRCUITS AND MICROPROCESSORS (ICMP) | ✅ Matched |
-| Network Theory and Signals & Systems (Professional Elective-I) | **EE303** | Dr. K. Sri Gowri | A | NETWORK THEORY & SIGNALS AND SYSTEMS (NT&SS) | ✅ Matched |
-| Open Elective-I | **-** | - | A | Open Elective-II | ⚠️ Unmatched |
-| Constitution of India (MLC-3) | **AC402** | Sri K. Harish Reddy | A | CONSTITUTION OF INDIA (COI) | ✅ Matched |
-| Programmable Logic Controller (SOC) | **EE311** | Sri A. Pradeep Kumar Yadav | A | PROGRAMMABLE LOGIC CONTROLLERS (PLC) | ✅ Matched |
-| Electrical Machines-II Lab | **EE208** | - | A | ELECTRICAL MACHINES-II (EMC-II) | ✅ Matched |
-| IC and Microprocessors Lab | **-** | - | A | - | ⚠️ Unmatched |
-| Massive Open Online Course (Digital Learning) | **-** | - | A | - | ⚠️ Unmatched |
-| Power Electronics-1 | **EE301** | Dr. M. Harsha Vardhan Reddy | B | POWER ELECTRONICS-I (PEL1) | ✅ Matched |
-| Power System -II | **EE302** | Dr. G. Venkata Subba Reddy | B | POWER SYSTEMS - II (PS-II) | ✅ Matched |
-| Integrated Circuits and Microprocessors | **EC318** | Sri K. Rama Krishna | B | INTEGRATED CIRCUITS AND MICROPROCESSORS (ICMP) | ✅ Matched |
-| Network Theory and Signals & Systems (Professional Elective-I) | **EE303** | Dr. G. Kishor | B | NETWORK THEORY & SIGNALS AND SYSTEMS (NT&SS) | ✅ Matched |
-| Open Elective-I | **-** | - | B | Open Elective-II | ⚠️ Unmatched |
-| Constitution of India (MLC-3) | **AC402** | Sri K. Harish Reddy | B | CONSTITUTION OF INDIA (COI) | ✅ Matched |
-| Programmable Logic Controller (SOC) | **EE311** | Dr. N. Ravi Sankar Reddy | B | PROGRAMMABLE LOGIC CONTROLLERS (PLC) | ✅ Matched |
-| Electrical Machines-II Lab | **EE208** | - | B | ELECTRICAL MACHINES-II (EMC-II) | ✅ Matched |
-| IC and Microprocessors Lab | **-** | - | B | - | ⚠️ Unmatched |
-| Massive Open Online Course (Digital Learning) | **-** | - | B | - | ⚠️ Unmatched |
-
-### Branch: EEE | Year: 3 | Semester: 6
-| Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| Power Systems - III | **EE307** | Dr. Y.V. Siva Reddy | A | POWER SYSTEMS - III (PS3) | ✅ Matched |
-| Power Electronics-II | **EE308** | Dr. M. Harsha Vardhan Reddy | A | POWER ELECTRONICS-II (PEL2) | ✅ Matched |
-| Microcontrollers | **EE309** | Dr. G. Satheesh | A | MICROCONTROLLERS (MC) | ✅ Matched |
-| Electromagnetic Fields | **EE104** | Dr. K. Sri Gowri | A | ELECTROMAGNETIC FIELDS (EMF) | ✅ Matched |
-| Open Elective-II | **-** | - | A | Open Elective-II | ⚠️ Unmatched |
-| Essence of Indian Traditional Knowledge (MC) | **MC104** | Sri T. Sarath Babu | A | ESSENCE OF INDIAN TRADITIONAL KNOWLEDGE (EITK) | ✅ Matched |
-| Power Electronics and Drives Laboratory | **EE314** | Dr. N. Ravi Sankar Reddy | A | POWER ELECTRONICS & DRIVES LABORATORY (PEL (P)) | ✅ Matched |
-| Power Systems Laboratory | **EE315** | Sri S. Anil Kumar | A | POWER SYSTEMS LABORATORY (PSP (P)) | ✅ Matched |
-| Microcontrollers Laboratory | **EE316** | Dr. M. Abid Nayeemuddin | A | MICROCONTROLLERS LABORATORY (MC (P)) | ✅ Matched |
-| Hybrid Power Systems Laboratory (SoC) | **-** | Dr. C. Harinatha Reddy | A | - | ⚠️ Unmatched |
-| Non-Conventional Sources of Energy (Professional Elective – II) | **-** | - | A | - | ⚠️ Unmatched |
-| Power Systems - III | **EE307** | Dr. Y.V. Siva Reddy | B | POWER SYSTEMS - III (PS3) | ✅ Matched |
-| Power Electronics-II | **EE308** | Dr. M. Harsha Vardhan Reddy | B | POWER ELECTRONICS-II (PEL2) | ✅ Matched |
-| Microcontrollers | **EE309** | Dr. G. Satheesh | B | MICROCONTROLLERS (MC) | ✅ Matched |
-| Electromagnetic Fields | **EE104** | Dr. K. Sri Gowri | B | ELECTROMAGNETIC FIELDS (EMF) | ✅ Matched |
-| Open Elective-II | **-** | - | B | Open Elective-II | ⚠️ Unmatched |
-| Essence of Indian Traditional Knowledge (MC) | **MC104** | Sri T. Sarath Babu | B | ESSENCE OF INDIAN TRADITIONAL KNOWLEDGE (EITK) | ✅ Matched |
-| Power Electronics and Drives Laboratory | **EE314** | Dr. M. Harsha Vardhan Reddy | B | POWER ELECTRONICS & DRIVES LABORATORY (PEL (P)) | ✅ Matched |
-| Power Systems Laboratory | **EE315** | Dr. G. Sreenivasa Reddy | B | POWER SYSTEMS LABORATORY (PSP (P)) | ✅ Matched |
-| Microcontrollers Laboratory | **EE316** | Dr. G. Satheesh | B | MICROCONTROLLERS LABORATORY (MC (P)) | ✅ Matched |
-| Hybrid Power Systems Laboratory (SoC) | **-** | Dr. G. Sreenivasa Reddy | B | - | ⚠️ Unmatched |
-| Non-Conventional Sources of Energy (Professional Elective – II) | **-** | - | B | - | ⚠️ Unmatched |
+| Introduction to Quantum Technologies & Applications (IQTA) | **BS301** | Dr. M. Siva Satyanarayana | A | - | ✅ Matched |
+| Power Electronics (PE) | **EE301** | Dr. M. Harsha Vardhan Reddy | A | - | ✅ Matched |
+| Digital Circuits (DC) | **EE302** | Dr. S. Saheb Basha | A | - | ✅ Matched |
+| Power Systems-II (PS-2) | **EE303** | Dr. G. V. Subba Reddy | A | - | ✅ Matched |
+| Signals & Systems (S&S) (PE-1) | **EE304** | Sri B. Amarnath Naidu | A | - | ✅ Matched |
+| Introduction to Python Programming (IPP) (SEC) | **EE305** | Dr. N. Chandra Sukanya | A | - | ✅ Matched |
+| Power Electronics Lab (PE (P)) | **EE306** | Dr. B. V. Arun Kumar | A | - | ✅ Matched |
+| Analog & Digital Circuits Lab (A&DC (P)) | **EE307** | Dr. S. Saheb Basha | A | - | ✅ Matched |
+| Tinkering Lab (TL (P)) | **ESCM02** | Sri S. Masum Basha | A | - | ✅ Matched |
 
 ### Branch: EEE | Year: 4 | Semester: 7
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Power System Operation and Control (Professional Elective-III) | **EE401** | Dr. Y.V. Siva Reddy | A | POWER SYSTEM OPERATION AND CONTROL (PSOC) | ✅ Matched |
-| Elements of Digital Signal Processing (Professional Elective-IV) | **EE402** | Sri A. Pradeep Kumar Yadav | A | ELEMENTS OF DIGITAL SIGNAL PROCESSING (EDSP) | ✅ Matched |
-| Utilization of Electrical Power (Professional Elective-V) | **EE407** | Dr. G. Satheesh | A | UTILIZATION OF ELECRICAL POWER (UEP) | ✅ Matched |
-| Smart Grid Technologies (Open Elective-III) | **OE703** | Dr. G. Sreenivasa Reddy | A | SMART GRID TECHNOLOGIES (SGT) | ✅ Matched |
-| Automation & Control (Open Elective-IV) | **OEC420** | Dr. C. Harinatha Reddy | A | AUTOMATION & CONTROL (AMC) | ✅ Matched |
-| Project Work | **ME402** | Dr. Y.V. Siva Reddy | A | PROJECT WORK (PW) | ✅ Matched |
-| Universal Human Values-2 | **-** | - | A | UNIVERSAL HUMAN VALUES - 2 (UHV2) | ⚠️ Unmatched |
-| Applications of IoT Lab | **SCEE04** | - | A | APPLICATIONS OF IOT (AIOT (P)) | ✅ Matched |
-| Power System Operation and Control (Professional Elective-III) | **EE401** | Dr. Y.V. Siva Reddy | B | POWER SYSTEM OPERATION AND CONTROL (PSOC) | ✅ Matched |
-| Elements of Digital Signal Processing (Professional Elective-IV) | **EE402** | Sri A. Pradeep Kumar Yadav | B | ELEMENTS OF DIGITAL SIGNAL PROCESSING (EDSP) | ✅ Matched |
-| Utilization of Electrical Power (Professional Elective-V) | **EE407** | Dr. G. Satheesh | B | UTILIZATION OF ELECRICAL POWER (UEP) | ✅ Matched |
-| Smart Grid Technologies (Open Elective-III) | **OE703** | Dr. G. Sreenivasa Reddy | B | SMART GRID TECHNOLOGIES (SGT) | ✅ Matched |
-| Automation & Control (Open Elective-IV) | **OEC420** | Dr. C. Harinatha Reddy | B | AUTOMATION & CONTROL (AMC) | ✅ Matched |
-| Project Work | **ME402** | Dr. Y.V. Siva Reddy | B | PROJECT WORK (PW) | ✅ Matched |
-| Universal Human Values-2 | **-** | - | B | UNIVERSAL HUMAN VALUES - 2 (UHV2) | ⚠️ Unmatched |
-| Applications of IoT Lab | **SCEE04** | - | B | APPLICATIONS OF IOT (AIOT (P)) | ✅ Matched |
+| Constitution of India (COI) (AC) | **AC402** | Sri A. Vijaya Kumar Reddy | A | - | ✅ Matched |
+| Power System Operation & Control (PSOC) | **EE401** | Sri D. Vannurappa | A | - | ✅ Matched |
+| Elements of Digital Signal Processing (EDSP) (PE-IV) | **EE402** | Sri A. Pradeep Kumar Yadav | A | - | ✅ Matched |
+| Utilization of Electrical Energy (UEE) (PE-V) | **EE403** | Smt. G. Haritha | A | - | ✅ Matched |
+| Power Systems & Simulation Lab (PSS (P)) (SEC) | **EE404** | Sri D. Vannurappa | A | - | ✅ Matched |
+| Project Work (PROJ) | **EE405** | Smt. B. Rajeswari | A | - | ✅ Matched |
+| Management Science (MS) | **HSM401** | Sri K. Nagaiah | A | - | ✅ Matched |
+| Open Elective-III (OE-III) | **OE401** | - | A | - | ✅ Matched |
+| Open Elective-IV (OE-IV) | **OE402** | - | A | - | ✅ Matched |
 
-### Branch: ME | Year: 1 | Semester: 1
+### Branch: ME | Year: 2 | Semester: 3
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Instrumentation | **-** | - | - | - | ⚠️ Unmatched |
-| Numerical Methods Probability | **-** | - | B | - | ⚠️ Unmatched |
-| Mechanics | **ME403** | - | B | MECHATRONICS (MT) | ✅ Matched |
-| Design Thinking & Innovation | **ESCM01** | - | B | DESIGN THINKING & INNOVATION (DTI) | ✅ Matched |
+| Numerical Methods Probability and statistics (NMPS) | **BS206** | Sri G. Venkata Rami Reddy | A | - | ✅ Matched |
+| Design Thinking & Innovation (DTI) | **ES201** | Sri G. Shaikshavali | A | - | ✅ Matched |
+| Universal Human Values (UHV) | **HSM201** | Sri P. Lakshmi Reddy | A | - | ✅ Matched |
+| Thermodynamics (TD) | **ME201** | Dr. B. Veera Badhra Reddy | A | - | ✅ Matched |
+| Mechanics of Solids (MOS) | **ME202** | Dr. K. Madhava Reddy | A | - | ✅ Matched |
+| Material Science and Metallurgy (MSM) | **ME203** | Dr. H. Raghavendra Rao | A | - | ✅ Matched |
+| Mechanics of Solids and Materials Science Lab (MSMS) | **ME204** | Dr. H. Raghavendra Rao | A | - | ✅ Matched |
+| Computer-aided Machine Drawing (CAMD) | **ME205** | Dr. B. Madhusudhan Reddy | A | - | ✅ Matched |
+| Python programming Lab (PYP) | **ME206** | Dr. K. Poli Reddy | A | - | ✅ Matched |
 
 ### Branch: ME | Year: 3 | Semester: 5
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| TOMP | **-** | - | A | - | ⚠️ Unmatched |
+| Intro. To Quantum Technology & Applications (IQTA) | **BS301** | Dr. A. Pedha Lingaswamy | A | - | ✅ Matched |
+| Tinkering Lab (TLP) | **ESCM02** | Sri P. Lakshmi Reddy | A | - | ✅ Matched |
+| Machining Process (MP) | **ME301** | Sri M. Murali Mohan | A | - | ✅ Matched |
+| Design of Machine Elements (DME) | **ME302** | Dr. B. Madhusudhan Reddy | A | - | ✅ Matched |
+| Metrology and Measurements (MMT) | **ME303** | Dr. G. Suresh Kumar | A | - | ✅ Matched |
+| Internal Combustion Engine & Gas turbine (ICGT) (PE-1) | **ME304** | Dr. G. Venkatesh | A | - | ✅ Matched |
+| Thermal Engineering Lab (TEP) | **ME305** | Dr. G. Venkatesh | A | - | ✅ Matched |
+| Theory of Machine Lab (TOMP) | **ME306** | Sri V. Mahanandi Reddy | A | - | ✅ Matched |
+| Machine tools & Metrology (MTMP) | **ME307** | Sri M. Murali Mohan | A | - | ✅ Matched |
 
-### Branch: UNKNOWN | Year: 1 | Semester: 1
+### Branch: ME | Year: 4 | Semester: 7
 | Subject Name | Matched Course Code | Faculty | Section | Matched Syllabus Title | Match Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Scanned Timetable Page 10 | **-** | - | - | - | ⚠️ Unmatched |
-| Scanned Timetable Page 11 | **-** | - | - | - | ⚠️ Unmatched |
-| Scanned Timetable Page 2 | **-** | - | - | - | ⚠️ Unmatched |
+| Constitution of India (COI) | **AC402** | Dr. K. Krishna Reddy | A | - | ✅ Matched |
+| AI & ML for Mechanical Engineering (AMME) | **ME401** | Dr. K. Jayasimha Reddy | A | - | ✅ Matched |
+| Industrial Engineering & Management (IEM) | **ME402** | Dr. V. Satish Kumar | A | - | ✅ Matched |
+| Additive Manufacturing (ADM) (PE-IV) | **ME403** | Dr. D. Mohan Krishnudu | A | - | ✅ Matched |
+| Industrial Robotics (IRT) (PE-V) | **ME404** | Dr. M. Nagaphani Sastry | A | - | ✅ Matched |
+| 3D Printing and Drone Technology (3DPD (P)) | **ME405** | Dr. D. Mohan Krishnudu | A | - | ✅ Matched |
+| Project Work (INT/PW) | **ME406** | Dr. G. Sankaraiah | A | - | ✅ Matched |
+| Open Elective - III (OE-III) | **OE401** | - | A | - | ✅ Matched |
+| Open Elective - IV (OE-IV) | **OE402** | - | A | - | ✅ Matched |

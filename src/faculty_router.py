@@ -65,7 +65,7 @@ DEPT_MAP = {
     "computer science and technology": "Computer Science and Technology"
 }
 
-KNOWN_DEPT_CODES = "CE, CSE, EEE, ECE, ME, H&S, CSM, CSD, CSB"
+KNOWN_DEPT_CODES = "CE, CSE, EEE, ECE, ME, H&S, CSM"
 
 
 def resolve_department(text: str) -> Optional[str]:
@@ -162,7 +162,7 @@ def handle_faculty_query(query: str, db: DatabaseManager) -> Optional[Dict[str, 
                 "response_type": ResponseType.CLARIFY,
                 "answer": f"Which department's HOD are you looking for? ({KNOWN_DEPT_CODES})",
                 "clarify_question": f"Which department's HOD are you looking for? ({KNOWN_DEPT_CODES})",
-                "clarify_options": ["CE", "CSE", "EEE", "ECE", "ME", "H&S", "CSM", "CSD", "CSB"],
+                "clarify_options": ["CE", "CSE", "EEE", "ECE", "ME", "H&S", "CSM"],
                 "sources": [],
                 "confidence": "Medium",
                 "confidence_reason": "Department clarification needed for HOD query"
@@ -215,7 +215,7 @@ def handle_faculty_query(query: str, db: DatabaseManager) -> Optional[Dict[str, 
                 "response_type": ResponseType.CLARIFY,
                 "answer": f"Which department's faculty count are you looking for? ({KNOWN_DEPT_CODES})",
                 "clarify_question": f"Which department's faculty count are you looking for? ({KNOWN_DEPT_CODES})",
-                "clarify_options": ["CE", "CSE", "EEE", "ECE", "ME", "H&S", "CSM", "CSD", "CSB"],
+                "clarify_options": ["CE", "CSE", "EEE", "ECE", "ME", "H&S", "CSM"],
                 "sources": [],
                 "confidence": "Medium",
                 "confidence_reason": "Department clarification needed for faculty count"
@@ -279,7 +279,7 @@ def handle_faculty_query(query: str, db: DatabaseManager) -> Optional[Dict[str, 
                 "response_type": ResponseType.CLARIFY,
                 "answer": f"Which department's faculty list are you looking for? ({KNOWN_DEPT_CODES})",
                 "clarify_question": f"Which department's faculty list are you looking for? ({KNOWN_DEPT_CODES})",
-                "clarify_options": ["CE", "CSE", "EEE", "ECE", "ME", "H&S", "CSM", "CSD", "CSB"],
+                "clarify_options": ["CE", "CSE", "EEE", "ECE", "ME", "H&S", "CSM"],
                 "sources": [],
                 "confidence": "Medium",
                 "confidence_reason": "Department clarification needed for faculty list"

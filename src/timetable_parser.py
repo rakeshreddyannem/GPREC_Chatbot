@@ -219,18 +219,12 @@ class TimetableParser:
         elif "MECHANICAL ENGINEERING" in upper_text or "MECHANICAL" in upper_text:
             branch = "ME"
 
-        # Refine sub-branch (CST, CSM, CSD, CSBS)
+        # Refine sub-branch (CSM)
         class_line_match = re.search(r'CLASS\s*[:\-]?\s*([^\n\r]+)', full_text, re.IGNORECASE)
         class_line = class_line_match.group(1).strip() if class_line_match else ""
 
-        if "CST" in class_line.upper():
-            branch = "CST"
-        elif "CSM" in class_line.upper() or "AI&ML" in class_line.upper():
+        if "CSM" in class_line.upper() or "AI&ML" in class_line.upper() or "AI & ML" in full_text.upper():
             branch = "CSM"
-        elif "CSD" in class_line.upper() or "DS" in class_line.upper():
-            branch = "CSD"
-        elif "CSBS" in class_line.upper() or "CSB" in class_line.upper():
-            branch = "CSBS"
 
         # Semester
         sem = None
@@ -548,26 +542,22 @@ def run_pipeline():
     db = DatabaseManager()
     parser = TimetableParser(db)
     
-    # 10 digital text PDFs
-    text_pdfs = [
-        Path("data/pdf/ea8fb5a3afae518cbad00e8563bf1b49.pdf"),
-        Path("data/pdf/50096d38c057dab2550204ce70676a12.pdf"),
-        Path("data/pdf/d01aaee9116381668a3df12235b68041.pdf"),
-        Path("data/pdf/0c819bae55dc3dd42deaaac3de5a7b0c.pdf"),
-        Path("data/pdf/3fe463abe3b0518c12d7f1fcc56d4968.pdf"),
-        Path("data/pdf/65c5c42e27935525aaa2b387d8afb13d.pdf"),
-        Path("data/pdf/b2b6f8450d6a34f20b45d6126505b061.pdf"),
-        Path("data/pdf/d09bb2cc13ca46370f7df11c69676d1a.pdf"),
-        Path("data/pdf/89fc6dcd1d0aaea1b874ed83a765e228.pdf"),
-        Path("data/pdf/914a59cb2254aca57f386399994882c6.pdf"),
-    ]
-    
-    # Add any PDFs present in data/timetable if user dropped any
-    tt_dir = Path("data/timetable")
+    tt_dir = Path("timetable_pdfs")
     if tt_dir.exists():
-        for p in tt_dir.glob("*.pdf"):
-            if p not in text_pdfs:
-                text_pdfs.append(p)
+        text_pdfs = sorted(list(tt_dir.glob("*.pdf")))
+    else:
+        text_pdfs = [
+            Path("data/pdf/ea8fb5a3afae518cbad00e8563bf1b49.pdf"),
+            Path("data/pdf/50096d38c057dab2550204ce70676a12.pdf"),
+            Path("data/pdf/d01aaee9116381668a3df12235b68041.pdf"),
+            Path("data/pdf/0c819bae55dc3dd42deaaac3de5a7b0c.pdf"),
+            Path("data/pdf/3fe463abe3b0518c12d7f1fcc56d4968.pdf"),
+            Path("data/pdf/65c5c42e27935525aaa2b387d8afb13d.pdf"),
+            Path("data/pdf/b2b6f8450d6a34f20b45d6126505b061.pdf"),
+            Path("data/pdf/d09bb2cc13ca46370f7df11c69676d1a.pdf"),
+            Path("data/pdf/89fc6dcd1d0aaea1b874ed83a765e228.pdf"),
+            Path("data/pdf/914a59cb2254aca57f386399994882c6.pdf"),
+        ]
 
     matched, unmatched = parser.parse_all_pdfs_and_save(text_pdfs)
     print(f"\nPipeline Finished: Matched = {len(matched)}, Unmatched = {len(unmatched)}")

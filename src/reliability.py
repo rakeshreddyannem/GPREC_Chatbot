@@ -28,7 +28,7 @@ class AmbiguityDetector:
     def detect_department(query: str) -> Optional[str]:
         q_upper = query.upper()
         # Direct abbreviation match with word boundaries
-        for code in ["EEE", "ECE", "CSE", "CSM", "CSD", "CE", "ME", "H&S", "HBS"]:
+        for code in ["EEE", "ECE", "CSE", "CSM", "CE", "ME", "H&S", "HBS"]:
             if re.search(r'\b' + re.escape(code) + r'\b', q_upper):
                 return code
         # Full name matching

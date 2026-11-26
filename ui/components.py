@@ -16,7 +16,9 @@ from src.subject_assistant import (
     build_quick_revision_prompt,
     call_subject_llm,
     answer_subject_doubt,
-    clean_subject_response
+    clean_subject_response,
+    extract_mcq_json,
+    generate_subject_mcqs
 )
 from src.curated_links import (
     get_branch_latest_syllabus_pdf,
@@ -24,6 +26,37 @@ from src.curated_links import (
     get_all_latest_syllabus_links_for_branch,
     is_cross_branch_url
 )
+
+def extract_unit_outcome(full_outcomes: str, unit_num: Any = None) -> str:
+    """Extracts only the Course Outcome corresponding to a specific unit (e.g. Unit 1 -> CO1)."""
+    if not full_outcomes or not str(full_outcomes).strip():
+        return ""
+    if unit_num is None or str(unit_num).strip().lower() in ("", "none", "0"):
+        return full_outcomes.strip()
+    
+    # Match CO<unit_num>:
+    pattern = rf'(?:^|[\s\n])(CO\s*{unit_num}\s*[:\-–—].*?)(?=(?:[\s\n]CO\s*\d\s*[:\-–—])|$)'
+    match = re.search(pattern, full_outcomes, re.IGNORECASE | re.DOTALL)
+    if match:
+        res = match.group(1).strip()
+        res = re.sub(r'[ \t]+', ' ', res)
+        return res.strip()
+    
+    # Match numbered 1. ... 2. ...
+    num_pattern = rf'(?:^|[\s\n])({unit_num}[\.\)]\s*.*?)(?=(?:[\s\n]\d[\.\)])|$)'
+    match_num = re.search(num_pattern, full_outcomes, re.IGNORECASE | re.DOTALL)
+    if match_num and len(re.findall(r'(?:^|[\s\n])\d[\.\)]', full_outcomes)) > 1:
+        res = match_num.group(1).strip()
+        res = re.sub(r'[ \t]+', ' ', res)
+        return res.strip()
+
+    # If already a single CO
+    if re.match(r'^CO\s*\d\s*[:\-–—]', full_outcomes.strip(), re.IGNORECASE):
+        all_cos = re.findall(r'CO\s*\d\s*[:\-–—]', full_outcomes, re.IGNORECASE)
+        if len(all_cos) <= 1:
+            return full_outcomes.strip()
+            
+    return full_outcomes.strip()
 
 @st.cache_data
 def get_cached_css(file_path: str = "ui/style.css") -> str:
@@ -358,7 +391,7 @@ def render_notices_fragment(db):
 
     c1, c2, c3, c4 = st.columns([1.2, 1, 1, 1])
     with c1:
-        dept_options = ["All", "General", "CSE", "ECE", "EEE", "CE", "ME", "CSM", "CSD", "CSB", "H&S"]
+        dept_options = ["All", "General", "CSE", "ECE", "EEE", "CE", "ME", "CSM", "H&S"]
         selected_dept = st.selectbox("Department", dept_options, key="notices_filter_dept")
     with c2:
         type_options = ["All", "timetable", "seating plan", "results", "revaluation", "hall ticket", "fee notification", "circular", "event"]
@@ -499,7 +532,7 @@ def render_deadlines_page(pipeline, db=None):
         return
         
     dl_search_kw = st.text_input("🔍 Search deadlines", placeholder="Search by exam fee, revaluation, semester...", key="deadlines_search_input")
-    dl_dept = st.selectbox("Filter by Department", ["All", "General", "CSE", "ECE", "EEE", "CE", "ME", "CSM", "CSD", "CSB"], key="deadlines_dept_select")
+    dl_dept = st.selectbox("Filter by Department", ["All", "General", "CSE", "ECE", "EEE", "CE", "ME", "CSM", "H&S"], key="deadlines_dept_select")
 
     if dl_dept != "All":
         deadlines = [d for d in deadlines if (d.get("department") or "General").upper() == dl_dept.upper()]
@@ -568,7 +601,7 @@ def render_academics_page(db):
     
     col1, col2 = st.columns(2)
     with col1:
-        branch = st.selectbox("Select Branch", ["CSE", "ECE", "EEE", "CE", "ME", "CSM", "CSD", "CSB"])
+        branch = st.selectbox("Select Branch", ["CSE", "ECE", "EEE", "CE", "ME", "CSM"])
     with col2:
         semester = st.selectbox("Select Semester", ["1", "2", "3", "4", "5", "6", "7", "8"])
 
@@ -632,8 +665,11 @@ def render_subject_assistance_fragment(pipeline, db):
     db = _ensure_fresh_db(db)
     from src.faculty_parser import DEPARTMENT_CONFIGS
     
+    all_dept_codes = [d["short_code"] for d in DEPARTMENT_CONFIGS]
+    dept_name_map = {d["short_code"]: d["name"] for d in DEPARTMENT_CONFIGS}
+
     # 1. State preservation
-    if "sub_assist_branch" not in st.session_state or st.session_state.sub_assist_branch == "CST":
+    if "sub_assist_branch" not in st.session_state or st.session_state.sub_assist_branch not in all_dept_codes:
         st.session_state.sub_assist_branch = "CSE"
     if "sub_assist_scheme" not in st.session_state:
         st.session_state.sub_assist_scheme = "2023"
@@ -645,10 +681,6 @@ def render_subject_assistance_fragment(pipeline, db):
         st.session_state.subject_doubt_chats = {}
     if "doubt_prompt_trigger" not in st.session_state:
         st.session_state.doubt_prompt_trigger = None
-
-    # Canonical departments from faculty_parser (excluding CST as requested)
-    all_dept_codes = [d["short_code"] for d in DEPARTMENT_CONFIGS if d["short_code"] != "CST"]
-    dept_name_map = {d["short_code"]: d["name"] for d in DEPARTMENT_CONFIGS if d["short_code"] != "CST"}
 
     # 4 columns for selectors: Branch, Scheme, Semester, Subject
     col1, col2, col3, col4 = st.columns([1.3, 1.0, 0.9, 2.2])
@@ -972,8 +1004,9 @@ def render_subject_assistance_fragment(pipeline, db):
                     st.markdown(f"**Topics:**\n\n{topics}")
                     if textbooks:
                         st.markdown(f"**Textbooks / References:**\n\n{textbooks}")
-                    if outcomes:
-                        st.markdown(f"**Course Outcomes (CO):**\n\n{outcomes}")
+                    unit_co = extract_unit_outcome(outcomes, unit_num)
+                    if unit_co:
+                        st.markdown(f"**Course Outcomes (CO):**\n\n{unit_co}")
         else:
             st.info(f"Detailed unit breakdown for '{resolved_title}' is not currently indexed in the syllabus table. You can still use the **Explain a Topic**, **Practice**, and **Ask a Doubt** tabs!")
 
@@ -1075,28 +1108,59 @@ def render_subject_assistance_fragment(pipeline, db):
                 sys_p, usr_p = build_practice_prompt(resolved_title, prac_unit, prac_count, prac_type, unit_topics=sel_topics)
                 client = getattr(pipeline, "client", None)
                 model_name = getattr(pipeline, "model_name", None)
-                raw_prac = call_subject_llm(sys_p, usr_p, client=client, model_name=model_name)
+                raw_prac = call_subject_llm(sys_p, usr_p, client=client, model_name=model_name, max_tokens=3500)
                 prac_content = clean_subject_response(raw_prac)
                 if VERIFICATION_LINE.lower() not in prac_content.lower():
                     prac_content = f"{prac_content.rstrip()}\n\n{VERIFICATION_LINE}"
+
+                # Ensure valid MCQ JSON exists before caching
+                if "multiple choice" in prac_type.lower():
+                    mcqs = extract_mcq_json(prac_content)
+                    if not mcqs:
+                        # Fallback to subject-aware generator if LLM returned thinking or unparseable output
+                        mcqs = generate_subject_mcqs(resolved_title, prac_unit, sel_topics, prac_count)
+                        prac_content = f"```json\n{json.dumps(mcqs, indent=2)}\n```\n\n{VERIFICATION_LINE}"
+
                 db.set_cached_answer(cache_key_prac, {
                     "answer": prac_content,
                     "response_type": "ANSWERED",
                     "subject": resolved_title
                 })
         elif cached_prac and cached_prac.get("answer"):
-            prac_content = clean_subject_response(cached_prac["answer"])
+            cand_ans = clean_subject_response(cached_prac["answer"])
+            if "multiple choice" in prac_type.lower():
+                # Verify that cached answer contains valid MCQs and not an unparsed reasoning trace
+                if extract_mcq_json(cand_ans):
+                    prac_content = cand_ans
+                else:
+                    # Invalidate bad cache and generate clean subject MCQs
+                    sel_topics = ""
+                    if units_data and prac_unit != "All Units":
+                        matched_u = next((u for u in units_data if f"Unit {u.get('unit_number')}: {u.get('unit_title')}" == prac_unit), None)
+                        if matched_u:
+                            sel_topics = matched_u.get("topics", "")
+                    mcqs = generate_subject_mcqs(resolved_title, prac_unit, sel_topics, prac_count)
+                    prac_content = f"```json\n{json.dumps(mcqs, indent=2)}\n```\n\n{VERIFICATION_LINE}"
+                    db.set_cached_answer(cache_key_prac, {
+                        "answer": prac_content,
+                        "response_type": "ANSWERED",
+                        "subject": resolved_title
+                    })
+            else:
+                prac_content = cand_ans
 
         if prac_content:
             # Render Practice Content
             if "multiple choice" in prac_type.lower():
-                mcq_json_match = re.search(r'```(?:json)?\s*(\[\s*\{[\s\S]*?\}\s*\])\s*```', prac_content)
-                mcq_list = None
-                if mcq_json_match:
-                    try:
-                        mcq_list = json.loads(mcq_json_match.group(1))
-                    except Exception:
-                        pass
+                mcq_list = extract_mcq_json(prac_content)
+                if not mcq_list:
+                    # Safety fallback to ensure student always gets interactive radio buttons
+                    sel_topics = ""
+                    if units_data and prac_unit != "All Units":
+                        matched_u = next((u for u in units_data if f"Unit {u.get('unit_number')}: {u.get('unit_title')}" == prac_unit), None)
+                        if matched_u:
+                            sel_topics = matched_u.get("topics", "")
+                    mcq_list = generate_subject_mcqs(resolved_title, prac_unit, sel_topics, prac_count)
 
                 if mcq_list and isinstance(mcq_list, list):
                     for idx, q in enumerate(mcq_list):

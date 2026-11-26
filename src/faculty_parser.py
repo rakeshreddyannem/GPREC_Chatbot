@@ -69,27 +69,6 @@ DEPARTMENT_CONFIGS = [
         "slug": "cse_ai_ml",
         "url": "https://www.gprec.ac.in/cse-artificial-intelligence-machine-learning-csm/",
         "aliases": ["csm", "ai ml", "aiml", "cse ai", "cse aiml", "cse artificial intelligence and machine learning"]
-    },
-    {
-        "name": "CSE - Data Science",
-        "short_code": "CSD",
-        "slug": "cse_data_science",
-        "url": "https://www.gprec.ac.in/cse-data-science/",
-        "aliases": ["csd", "data science", "cse ds", "cse data science"]
-    },
-    {
-        "name": "Computer Science and Business Systems",
-        "short_code": "CSB",
-        "slug": "computer_science_and_business_systems",
-        "url": "https://www.gprec.ac.in/computer-science-and-business-systems/",
-        "aliases": ["csb", "business systems", "computer science and business systems"]
-    },
-    {
-        "name": "Computer Science and Technology",
-        "short_code": "CST",
-        "slug": "computer_science_and_technology",
-        "url": "https://www.gprec.ac.in/computer-science-and-technology/",
-        "aliases": ["cst", "computer science and technology", "cs technology"]
     }
 ]
 
