@@ -217,85 +217,86 @@ def get_cached_available_note_courses(_db, branch, semester):
     return []
 
 def render_pdf_preview_element(pdf_path: str, height: int = 650, note_key: str = ""):
-    """Renders a robust PDF document previewer with both embedded viewer and page-by-page reader."""
+    """Renders a 100% reliable document previewer using native image rendering (never blocked by Chrome)."""
     if not pdf_path or not os.path.exists(pdf_path):
         st.warning("⚠️ Document file not found on disk.")
         return
 
-    import streamlit.components.v1 as components
-
-    # Try reading page count with PyMuPDF (fitz)
-    doc = None
-    total_pages = 0
     try:
         import fitz
         doc = fitz.open(pdf_path)
         total_pages = len(doc)
-    except Exception:
-        pass
+    except Exception as e:
+        st.error(f"Failed to open PDF document: {e}")
+        return
 
-    tabs_titles = ["📖 Interactive Viewer", f"📄 Page by Page ({total_pages} Pages)"] if total_pages > 0 else ["📖 Interactive Viewer"]
-    prev_tabs = st.tabs(tabs_titles)
+    if total_pages == 0:
+        st.info("Document contains no renderable pages.")
+        return
 
-    # 1. Embedded Viewer Tab
-    with prev_tabs[0]:
+    key_safe = (note_key or os.path.basename(pdf_path)).replace(" ", "_").replace(".", "_").replace("-", "_")
+
+    # Reader controls: View mode, resolution, total pages
+    ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([1.6, 1.2, 1.2])
+    with ctrl_col1:
+        view_mode = st.radio(
+            "View Mode",
+            ["Single Page Reader", "Continuous Scroll (First 5 Pages)"],
+            horizontal=True,
+            key=f"vmode_{key_safe}"
+        )
+    with ctrl_col2:
+        zoom_level = st.selectbox(
+            "Quality / Zoom",
+            ["Normal (130 DPI)", "High Definition (180 DPI)"],
+            index=0,
+            key=f"dpi_{key_safe}"
+        )
+        dpi = 180 if "High" in zoom_level else 130
+
+    with ctrl_col3:
+        st.markdown(f"<div style='margin-top:28px; font-weight:600; color:#334155; font-size:0.85rem;'>📑 <b>{total_pages} Total Pages</b></div>", unsafe_allow_html=True)
+
+    if view_mode == "Single Page Reader":
+        # Page Navigation Slider
+        c_nav1, c_nav2 = st.columns([3, 1])
+        with c_nav1:
+            cur_page = st.slider(
+                f"Page Navigation",
+                min_value=1,
+                max_value=total_pages,
+                value=1,
+                key=f"pdf_slider_{key_safe}"
+            )
+        with c_nav2:
+            st.markdown(f"<div style='margin-top:28px; font-weight:600; color:#1e293b;'>📄 Page <b>{cur_page}</b> of <b>{total_pages}</b></div>", unsafe_allow_html=True)
+
+        # Render current page
         try:
-            with open(pdf_path, "rb") as f:
-                pdf_bytes = f.read()
-            b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
+            page_obj = doc[cur_page - 1]
+            pix = page_obj.get_pixmap(dpi=dpi)
+            img_bytes = pix.tobytes("png")
+            st.image(
+                img_bytes,
+                caption=f"{os.path.basename(pdf_path)} - Page {cur_page} / {total_pages}",
+                use_container_width=True
+            )
+        except Exception as err:
+            st.error(f"Error displaying page {cur_page}: {err}")
 
-            # Using components.html creates a dedicated sandboxed iframe that DOMPurify cannot strip
-            html_content = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="utf-8">
-              <style>
-                html, body {{ margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #f8fafc; }}
-                .pdf-wrap {{ width: 100%; height: 100%; box-sizing: border-box; }}
-                object, iframe, embed {{ width: 100%; height: 100%; border: none; }}
-              </style>
-            </head>
-            <body>
-              <div class="pdf-wrap">
-                <object data="data:application/pdf;base64,{b64_pdf}#toolbar=1&navpanes=1" type="application/pdf" width="100%" height="100%">
-                  <iframe src="data:application/pdf;base64,{b64_pdf}#toolbar=1" width="100%" height="100%">
-                    <div style="padding: 24px; font-family: sans-serif; text-align: center; color: #475569;">
-                      <p>Inline PDF plugin is not enabled in this browser view.</p>
-                      <p>👉 Please switch to the <b>Page by Page</b> tab above to view every page, or use the <b>Download</b> button.</p>
-                    </div>
-                  </iframe>
-                </object>
-              </div>
-            </body>
-            </html>
-            """
-            components.html(html_content, height=height, scrolling=False)
-        except Exception as e:
-            st.error(f"Error loading PDF preview: {e}")
-
-    # 2. Page-by-Page View Tab (Guaranteed 100% compatibility across all browsers and mobile devices)
-    if len(prev_tabs) > 1 and doc is not None and total_pages > 0:
-        with prev_tabs[1]:
-            c_p1, c_p2 = st.columns([2, 1])
-            with c_p1:
-                cur_page = st.slider(
-                    f"Page navigation (Total: {total_pages})",
-                    min_value=1,
-                    max_value=total_pages,
-                    value=1,
-                    key=f"pdf_slider_{note_key or os.path.basename(pdf_path)}"
-                )
-            with c_p2:
-                st.caption(f"Displaying Page **{cur_page}** of **{total_pages}**")
-
+    else:
+        # Continuous Scroll (First 5 pages or all if <= 5)
+        pages_to_show = min(5, total_pages)
+        st.caption(f"Showing first {pages_to_show} pages sequentially. Use Single Page Reader or the Download button to view all {total_pages} pages.")
+        for p_idx in range(pages_to_show):
             try:
-                page_obj = doc[cur_page - 1]
-                pix = page_obj.get_pixmap(dpi=140)
+                page_obj = doc[p_idx]
+                pix = page_obj.get_pixmap(dpi=dpi)
                 img_bytes = pix.tobytes("png")
-                st.image(img_bytes, caption=f"{os.path.basename(pdf_path)} - Page {cur_page} / {total_pages}", use_container_width=True)
-            except Exception as e:
-                st.error(f"Failed to render page {cur_page}: {e}")
+                st.markdown(f"<div style='margin-top:14px; margin-bottom:4px; font-weight:600; color:#334155; font-size:0.85rem;'>📄 Page {p_idx + 1} of {total_pages}</div>", unsafe_allow_html=True)
+                st.image(img_bytes, use_container_width=True)
+            except Exception as err:
+                st.error(f"Error displaying page {p_idx + 1}: {err}")
 
 @st.cache_data(ttl=300)
 def get_cached_academics_subjects(_db, branch, semester):
