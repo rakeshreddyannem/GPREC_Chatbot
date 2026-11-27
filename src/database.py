@@ -2259,7 +2259,7 @@ class DatabaseManager:
                 actual_code = matched_syl.get("course_code") if (matched_syl and matched_syl.get("course_code")) else code
 
                 label_code = f"{actual_code} - " if actual_code else ""
-                display_label = f"[Running this semester] {label_code}{actual_title}"
+                display_label = f"{label_code}{actual_title}"
 
                 if actual_code and actual_code.upper() in seen_codes:
                     continue
@@ -2606,11 +2606,16 @@ class DatabaseManager:
 
                     r["file_type"] = (r.get("file_type") or "").lstrip(".")
 
-                    # Resolve absolute path
+                    # Resolve absolute path with robust fallbacks
                     fp = r.get("filepath", "")
                     p = Path(fp)
                     if not p.is_absolute():
-                        p = config.BASE_DIR / p
+                        candidates = [
+                            config.BASE_DIR / p,
+                            Path.cwd() / p,
+                            config.BASE_DIR / "Subject_notes_pdfs_semester_Wise" / Path(fp).name,
+                        ]
+                        p = next((cand for cand in candidates if cand.exists()), config.BASE_DIR / p)
                     r["abs_filepath"] = str(p.resolve())
                     r["file_exists"] = p.exists()
 
@@ -2679,7 +2684,12 @@ class DatabaseManager:
                     res["formatted_size"] = f"{sb / (1024 * 1024):.1f} MB" if sb >= 1024 * 1024 else f"{max(1, sb // 1024)} KB"
                     p = Path(res.get("filepath", ""))
                     if not p.is_absolute():
-                        p = config.BASE_DIR / p
+                        candidates = [
+                            config.BASE_DIR / p,
+                            Path.cwd() / p,
+                            config.BASE_DIR / "Subject_notes_pdfs_semester_Wise" / Path(res.get("filepath", "")).name,
+                        ]
+                        p = next((cand for cand in candidates if cand.exists()), config.BASE_DIR / p)
                     res["abs_filepath"] = str(p.resolve())
                     res["file_exists"] = p.exists()
                     return res

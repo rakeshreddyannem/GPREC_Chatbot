@@ -217,86 +217,184 @@ def get_cached_available_note_courses(_db, branch, semester):
     return []
 
 def render_pdf_preview_element(pdf_path: str, height: int = 650, note_key: str = ""):
-    """Renders a 100% reliable document previewer using native image rendering (never blocked by Chrome)."""
+    """Renders a 100% reliable document previewer with PyMuPDF image reader and PDF.js canvas fallback."""
     if not pdf_path or not os.path.exists(pdf_path):
         st.warning("⚠️ Document file not found on disk.")
         return
 
+    # Check if fitz (PyMuPDF) is available
+    fitz_mod = None
     try:
         import fitz
-        doc = fitz.open(pdf_path)
-        total_pages = len(doc)
-    except Exception as e:
-        st.error(f"Failed to open PDF document: {e}")
-        return
-
-    if total_pages == 0:
-        st.info("Document contains no renderable pages.")
-        return
-
-    key_safe = (note_key or os.path.basename(pdf_path)).replace(" ", "_").replace(".", "_").replace("-", "_")
-
-    # Reader controls: View mode, resolution, total pages
-    ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([1.6, 1.2, 1.2])
-    with ctrl_col1:
-        view_mode = st.radio(
-            "View Mode",
-            ["Single Page Reader", "Continuous Scroll (First 5 Pages)"],
-            horizontal=True,
-            key=f"vmode_{key_safe}"
-        )
-    with ctrl_col2:
-        zoom_level = st.selectbox(
-            "Quality / Zoom",
-            ["Normal (130 DPI)", "High Definition (180 DPI)"],
-            index=0,
-            key=f"dpi_{key_safe}"
-        )
-        dpi = 180 if "High" in zoom_level else 130
-
-    with ctrl_col3:
-        st.markdown(f"<div style='margin-top:28px; font-weight:600; color:#334155; font-size:0.85rem;'>📑 <b>{total_pages} Total Pages</b></div>", unsafe_allow_html=True)
-
-    if view_mode == "Single Page Reader":
-        # Page Navigation Slider
-        c_nav1, c_nav2 = st.columns([3, 1])
-        with c_nav1:
-            cur_page = st.slider(
-                f"Page Navigation",
-                min_value=1,
-                max_value=total_pages,
-                value=1,
-                key=f"pdf_slider_{key_safe}"
-            )
-        with c_nav2:
-            st.markdown(f"<div style='margin-top:28px; font-weight:600; color:#1e293b;'>📄 Page <b>{cur_page}</b> of <b>{total_pages}</b></div>", unsafe_allow_html=True)
-
-        # Render current page
+        fitz_mod = fitz
+    except ImportError:
         try:
-            page_obj = doc[cur_page - 1]
-            pix = page_obj.get_pixmap(dpi=dpi)
-            img_bytes = pix.tobytes("png")
-            st.image(
-                img_bytes,
-                caption=f"{os.path.basename(pdf_path)} - Page {cur_page} / {total_pages}",
-                use_container_width=True
-            )
-        except Exception as err:
-            st.error(f"Error displaying page {cur_page}: {err}")
+            import pymupdf as fitz
+            fitz_mod = fitz
+        except ImportError:
+            fitz_mod = None
 
-    else:
-        # Continuous Scroll (First 5 pages or all if <= 5)
-        pages_to_show = min(5, total_pages)
-        st.caption(f"Showing first {pages_to_show} pages sequentially. Use Single Page Reader or the Download button to view all {total_pages} pages.")
-        for p_idx in range(pages_to_show):
-            try:
-                page_obj = doc[p_idx]
-                pix = page_obj.get_pixmap(dpi=dpi)
-                img_bytes = pix.tobytes("png")
-                st.markdown(f"<div style='margin-top:14px; margin-bottom:4px; font-weight:600; color:#334155; font-size:0.85rem;'>📄 Page {p_idx + 1} of {total_pages}</div>", unsafe_allow_html=True)
-                st.image(img_bytes, use_container_width=True)
-            except Exception as err:
-                st.error(f"Error displaying page {p_idx + 1}: {err}")
+    if fitz_mod is not None:
+        try:
+            doc = fitz_mod.open(pdf_path)
+            total_pages = len(doc)
+            if total_pages > 0:
+                key_safe = (note_key or os.path.basename(pdf_path)).replace(" ", "_").replace(".", "_").replace("-", "_")
+
+                # Reader controls: View mode, resolution, total pages
+                ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([1.6, 1.2, 1.2])
+                with ctrl_col1:
+                    view_mode = st.radio(
+                        "View Mode",
+                        ["Single Page Reader", "Continuous Scroll (First 5 Pages)"],
+                        horizontal=True,
+                        key=f"vmode_{key_safe}"
+                    )
+                with ctrl_col2:
+                    zoom_level = st.selectbox(
+                        "Quality / Zoom",
+                        ["Normal (130 DPI)", "High Definition (180 DPI)"],
+                        index=0,
+                        key=f"dpi_{key_safe}"
+                    )
+                    dpi = 180 if "High" in zoom_level else 130
+
+                with ctrl_col3:
+                    st.markdown(f"<div style='margin-top:28px; font-weight:600; color:#334155; font-size:0.85rem;'>📑 <b>{total_pages} Total Pages</b></div>", unsafe_allow_html=True)
+
+                if view_mode == "Single Page Reader":
+                    c_nav1, c_nav2 = st.columns([3, 1])
+                    with c_nav1:
+                        cur_page = st.slider(
+                            "Page Navigation",
+                            min_value=1,
+                            max_value=total_pages,
+                            value=1,
+                            key=f"pdf_slider_{key_safe}"
+                        )
+                    with c_nav2:
+                        st.markdown(f"<div style='margin-top:28px; font-weight:600; color:#1e293b;'>📄 Page <b>{cur_page}</b> of <b>{total_pages}</b></div>", unsafe_allow_html=True)
+
+                    try:
+                        page_obj = doc[cur_page - 1]
+                        pix = page_obj.get_pixmap(dpi=dpi)
+                        img_bytes = pix.tobytes("png")
+                        st.image(
+                            img_bytes,
+                            caption=f"{os.path.basename(pdf_path)} - Page {cur_page} / {total_pages}",
+                            use_container_width=True
+                        )
+                    except Exception as err:
+                        st.error(f"Error displaying page {cur_page}: {err}")
+                    return
+
+                else:
+                    pages_to_show = min(5, total_pages)
+                    st.caption(f"Showing first {pages_to_show} pages sequentially. Use Single Page Reader or the Download button to view all {total_pages} pages.")
+                    for p_idx in range(pages_to_show):
+                        try:
+                            page_obj = doc[p_idx]
+                            pix = page_obj.get_pixmap(dpi=dpi)
+                            img_bytes = pix.tobytes("png")
+                            st.markdown(f"<div style='margin-top:14px; margin-bottom:4px; font-weight:600; color:#334155; font-size:0.85rem;'>📄 Page {p_idx + 1} of {total_pages}</div>", unsafe_allow_html=True)
+                            st.image(img_bytes, use_container_width=True)
+                        except Exception as err:
+                            st.error(f"Error displaying page {p_idx + 1}: {err}")
+                    return
+        except Exception:
+            pass
+
+    # Fallback to Mozilla PDF.js HTML5 Canvas Viewer (runs 100% in browser, never requires Python C-libs or data: iframes)
+    try:
+        import streamlit.components.v1 as components
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+        b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
+
+        pdfjs_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+          <style>
+            * {{ box-sizing: border-box; }}
+            body {{ margin: 0; padding: 10px; background: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
+            .toolbar {{ display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 8px 12px; background: #e2e8f0; border-radius: 6px; margin-bottom: 10px; }}
+            .btn-group {{ display: flex; gap: 6px; align-items: center; }}
+            button {{ padding: 6px 14px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; transition: background 0.15s; }}
+            button:hover {{ background: #1d4ed8; }}
+            button:disabled {{ background: #94a3b8; cursor: not-allowed; }}
+            .page-info {{ font-size: 13px; font-weight: 600; color: #1e293b; }}
+            .canvas-wrap {{ display: flex; justify-content: center; overflow: auto; max-height: {height - 80}px; border-radius: 6px; }}
+            canvas {{ border: 1px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-radius: 4px; max-width: 100%; height: auto; }}
+          </style>
+        </head>
+        <body>
+          <div class="toolbar">
+            <div class="btn-group">
+              <button id="prev-btn">⬅️ Previous</button>
+              <button id="next-btn">Next ➡️</button>
+            </div>
+            <span class="page-info">Page <span id="page-num">1</span> of <span id="page-count">--</span></span>
+            <div class="btn-group">
+              <button id="zoom-in">🔍 Zoom +</button>
+              <button id="zoom-out">🔍 Zoom -</button>
+            </div>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="pdf-canvas"></canvas>
+          </div>
+          <script>
+            const pdfData = atob("{b64_pdf}");
+            pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+            let pdfDoc = null, pageNum = 1, pageRendering = false, pageNumPending = null, scale = 1.35;
+            const canvas = document.getElementById("pdf-canvas"), ctx = canvas.getContext("2d");
+
+            function renderPage(num) {{
+              pageRendering = true;
+              pdfDoc.getPage(num).then(function(page) {{
+                const viewport = page.getViewport({{scale: scale}});
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                const renderContext = {{ canvasContext: ctx, viewport: viewport }};
+                const renderTask = page.render(renderContext);
+                renderTask.promise.then(function() {{
+                  pageRendering = false;
+                  if (pageNumPending !== null) {{
+                    renderPage(pageNumPending);
+                    pageNumPending = null;
+                  }}
+                }});
+              }});
+              document.getElementById("page-num").textContent = num;
+              document.getElementById("prev-btn").disabled = (num <= 1);
+              document.getElementById("next-btn").disabled = (num >= pdfDoc.numPages);
+            }}
+
+            function queueRenderPage(num) {{
+              if (pageRendering) {{ pageNumPending = num; }} else {{ renderPage(num); }}
+            }}
+
+            document.getElementById("prev-btn").addEventListener("click", () => {{ if (pageNum > 1) {{ pageNum--; queueRenderPage(pageNum); }} }});
+            document.getElementById("next-btn").addEventListener("click", () => {{ if (pageNum < pdfDoc.numPages) {{ pageNum++; queueRenderPage(pageNum); }} }});
+            document.getElementById("zoom-in").addEventListener("click", () => {{ scale += 0.25; queueRenderPage(pageNum); }});
+            document.getElementById("zoom-out").addEventListener("click", () => {{ if (scale > 0.6) {{ scale -= 0.25; queueRenderPage(pageNum); }} }});
+
+            pdfjsLib.getDocument({{data: pdfData}}).promise.then(function(pdfDoc_) {{
+              pdfDoc = pdfDoc_;
+              document.getElementById("page-count").textContent = pdfDoc.numPages;
+              renderPage(pageNum);
+            }}).catch(function(err) {{
+              document.body.innerHTML = "<div style='padding:20px; text-align:center; color:#dc2626;'>Unable to load PDF preview in canvas: " + err.message + "</div>";
+            }});
+          </script>
+        </body>
+        </html>
+        """
+        components.html(pdfjs_html, height=height, scrolling=False)
+    except Exception as e:
+        st.info("Preview currently unavailable. Please click **⬇️ Download** to view the document.")
 
 @st.cache_data(ttl=300)
 def get_cached_academics_subjects(_db, branch, semester):
@@ -1243,7 +1341,17 @@ def render_subject_assistance_fragment(pipeline, db):
                 for note in filtered_notes:
                     with st.container(border=True):
                         fp = note.get("abs_filepath")
-                        file_exists = fp and os.path.exists(fp)
+                        if not (fp and os.path.exists(fp)):
+                            raw_fp = note.get("filepath", "")
+                            for cand in [
+                                config.BASE_DIR / raw_fp,
+                                Path.cwd() / raw_fp,
+                                config.BASE_DIR / "Subject_notes_pdfs_semester_Wise" / Path(raw_fp).name,
+                            ]:
+                                if cand.exists():
+                                    fp = str(cand.resolve())
+                                    break
+                        file_exists = bool(fp and os.path.exists(fp))
                         is_pdf = (note.get("file_type") or "").lower() == "pdf"
 
                         # Extract page count if PDF

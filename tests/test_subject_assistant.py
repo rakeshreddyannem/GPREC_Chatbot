@@ -383,7 +383,7 @@ def test_cache_key_with_branch_and_scheme():
 # ---------------------------------------------------------------------------
 
 def test_timetable_subjects_ordered_first_with_marker():
-    """Subjects running this semester from timetable_subjects appear first marked '[Running this semester]'."""
+    """Subjects running this semester appear first, and display labels are clean without '[Running this semester]' prefix."""
     db = DatabaseManager()
     subjects = db.get_subject_assistance_subjects("CSE", semester=3, scheme="2023")
     assert len(subjects) > 0
@@ -392,10 +392,10 @@ def test_timetable_subjects_ordered_first_with_marker():
     running_flags = [s["is_running"] for s in subjects]
     assert running_flags[0] is True, "First subject must be running timetable subject"
     
-    # Running subjects must have the display marker
+    # Running subjects must NOT have the prefix in display_label (per user request)
     running_labels = [s["display_label"] for s in subjects if s["is_running"]]
     for label in running_labels:
-        assert "[Running this semester]" in label
+        assert "[Running this semester]" not in label
 
 
 # ---------------------------------------------------------------------------
