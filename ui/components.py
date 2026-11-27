@@ -216,39 +216,86 @@ def get_cached_available_note_courses(_db, branch, semester):
         return fresh_db.get_available_note_courses_for_semester(branch, semester)
     return []
 
-def render_pdf_preview_element(pdf_path: str, height: int = 650):
-    """Renders an embedded, interactive PDF document viewer using a data URI iframe."""
+def render_pdf_preview_element(pdf_path: str, height: int = 650, note_key: str = ""):
+    """Renders a robust PDF document previewer with both embedded viewer and page-by-page reader."""
     if not pdf_path or not os.path.exists(pdf_path):
         st.warning("⚠️ Document file not found on disk.")
         return
 
+    import streamlit.components.v1 as components
+
+    # Try reading page count with PyMuPDF (fitz)
+    doc = None
+    total_pages = 0
     try:
-        with open(pdf_path, "rb") as f:
-            pdf_bytes = f.read()
-        b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
+        import fitz
+        doc = fitz.open(pdf_path)
+        total_pages = len(doc)
+    except Exception:
+        pass
 
-        page_info = ""
+    tabs_titles = ["📖 Interactive Viewer", f"📄 Page by Page ({total_pages} Pages)"] if total_pages > 0 else ["📖 Interactive Viewer"]
+    prev_tabs = st.tabs(tabs_titles)
+
+    # 1. Embedded Viewer Tab
+    with prev_tabs[0]:
         try:
-            import fitz
-            with fitz.open(pdf_path) as doc:
-                page_info = f" • 📑 {len(doc)} pages"
-        except Exception:
-            pass
+            with open(pdf_path, "rb") as f:
+                pdf_bytes = f.read()
+            b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
 
-        st.caption(f"Viewing document preview ({len(pdf_bytes) // 1024} KB{page_info}). Use browser zoom, scroll, and toolbar controls inside the viewer.")
+            # Using components.html creates a dedicated sandboxed iframe that DOMPurify cannot strip
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <style>
+                html, body {{ margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #f8fafc; }}
+                .pdf-wrap {{ width: 100%; height: 100%; box-sizing: border-box; }}
+                object, iframe, embed {{ width: 100%; height: 100%; border: none; }}
+              </style>
+            </head>
+            <body>
+              <div class="pdf-wrap">
+                <object data="data:application/pdf;base64,{b64_pdf}#toolbar=1&navpanes=1" type="application/pdf" width="100%" height="100%">
+                  <iframe src="data:application/pdf;base64,{b64_pdf}#toolbar=1" width="100%" height="100%">
+                    <div style="padding: 24px; font-family: sans-serif; text-align: center; color: #475569;">
+                      <p>Inline PDF plugin is not enabled in this browser view.</p>
+                      <p>👉 Please switch to the <b>Page by Page</b> tab above to view every page, or use the <b>Download</b> button.</p>
+                    </div>
+                  </iframe>
+                </object>
+              </div>
+            </body>
+            </html>
+            """
+            components.html(html_content, height=height, scrolling=False)
+        except Exception as e:
+            st.error(f"Error loading PDF preview: {e}")
 
-        pdf_html = (
-            f'<div style="margin-top:6px; margin-bottom:12px; border-radius:8px; overflow:hidden; border:1px solid #cbd5e1; box-shadow:0 1px 3px rgba(0,0,0,0.08);">'
-            f'<iframe src="data:application/pdf;base64,{b64_pdf}#toolbar=1&navpanes=1&scrollbar=1" '
-            f'width="100%" height="{height}px" type="application/pdf" '
-            f'style="border:none; width:100%; height:{height}px;">'
-            f'<p>Your browser does not support inline PDF viewing. Please click the Download button above to view the file.</p>'
-            f'</iframe>'
-            f'</div>'
-        )
-        st.markdown(pdf_html, unsafe_allow_html=True)
-    except Exception as e:
-        st.error(f"Failed to generate document preview: {e}")
+    # 2. Page-by-Page View Tab (Guaranteed 100% compatibility across all browsers and mobile devices)
+    if len(prev_tabs) > 1 and doc is not None and total_pages > 0:
+        with prev_tabs[1]:
+            c_p1, c_p2 = st.columns([2, 1])
+            with c_p1:
+                cur_page = st.slider(
+                    f"Page navigation (Total: {total_pages})",
+                    min_value=1,
+                    max_value=total_pages,
+                    value=1,
+                    key=f"pdf_slider_{note_key or os.path.basename(pdf_path)}"
+                )
+            with c_p2:
+                st.caption(f"Displaying Page **{cur_page}** of **{total_pages}**")
+
+            try:
+                page_obj = doc[cur_page - 1]
+                pix = page_obj.get_pixmap(dpi=140)
+                img_bytes = pix.tobytes("png")
+                st.image(img_bytes, caption=f"{os.path.basename(pdf_path)} - Page {cur_page} / {total_pages}", use_container_width=True)
+            except Exception as e:
+                st.error(f"Failed to render page {cur_page}: {e}")
 
 @st.cache_data(ttl=300)
 def get_cached_academics_subjects(_db, branch, semester):
@@ -724,8 +771,9 @@ def render_subject_assistance_fragment(pipeline, db):
     dept_name_map = {d["short_code"]: d["name"] for d in DEPARTMENT_CONFIGS}
 
     # 1. State preservation
+    default_branch = "EEE" if "EEE" in all_dept_codes else ("CSE" if "CSE" in all_dept_codes else all_dept_codes[0])
     if "sub_assist_branch" not in st.session_state or st.session_state.sub_assist_branch not in all_dept_codes:
-        st.session_state.sub_assist_branch = "CSE"
+        st.session_state.sub_assist_branch = default_branch
     if "sub_assist_scheme" not in st.session_state:
         st.session_state.sub_assist_scheme = "2023"
     if "sub_assist_semester" not in st.session_state:
@@ -740,10 +788,10 @@ def render_subject_assistance_fragment(pipeline, db):
     # 4 columns for selectors: Branch, Scheme, Semester, Subject
     col1, col2, col3, col4 = st.columns([1.3, 1.0, 0.9, 2.2])
 
-    # 1. Branch Selector (All 10 departments)
+    # 1. Branch Selector (All 10 departments) - Defaults to EEE
     with col1:
         cur_branch = st.session_state.sub_assist_branch
-        b_idx = all_dept_codes.index(cur_branch) if cur_branch in all_dept_codes else 0
+        b_idx = all_dept_codes.index(cur_branch) if cur_branch in all_dept_codes else all_dept_codes.index(default_branch)
         selected_branch = st.selectbox(
             "Branch",
             all_dept_codes,
@@ -1120,7 +1168,7 @@ def render_subject_assistance_fragment(pipeline, db):
                                 is_pdf = (unote.get("file_type") or "").lower() == "pdf"
                                 with st.expander(f"👁️ Preview: {unote['filename']}", expanded=False):
                                     if is_pdf:
-                                        render_pdf_preview_element(fp, height=550)
+                                        render_pdf_preview_element(fp, height=550, note_key=f"syl_note_{unote['id']}_{unit_num}")
                                     else:
                                         st.info(f"📄 Word document format (`.{unote.get('file_type', 'doc')}`). Please use the **⬇️ Download** button above to open.")
         else:
@@ -1247,7 +1295,7 @@ def render_subject_assistance_fragment(pipeline, db):
                             expander_label = f"👁️ Preview PDF Document: {note['filename']}" if is_pdf else f"👁️ Document Details: {note['filename']}"
                             with st.expander(expander_label, expanded=False):
                                 if is_pdf:
-                                    render_pdf_preview_element(fp, height=650)
+                                    render_pdf_preview_element(fp, height=650, note_key=f"tab_note_{note['id']}")
                                 else:
                                     st.info(f"📄 **{note['filename']}** is a Word document format (`.{note.get('file_type', 'doc')}`). Browsers cannot preview Word documents natively. Please click the **⬇️ Download** button above to open it in Microsoft Word, LibreOffice, or Google Docs.")
         else:
