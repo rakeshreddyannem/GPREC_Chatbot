@@ -216,6 +216,40 @@ def get_cached_available_note_courses(_db, branch, semester):
         return fresh_db.get_available_note_courses_for_semester(branch, semester)
     return []
 
+def render_pdf_preview_element(pdf_path: str, height: int = 650):
+    """Renders an embedded, interactive PDF document viewer using a data URI iframe."""
+    if not pdf_path or not os.path.exists(pdf_path):
+        st.warning("⚠️ Document file not found on disk.")
+        return
+
+    try:
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+        b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
+
+        page_info = ""
+        try:
+            import fitz
+            with fitz.open(pdf_path) as doc:
+                page_info = f" • 📑 {len(doc)} pages"
+        except Exception:
+            pass
+
+        st.caption(f"Viewing document preview ({len(pdf_bytes) // 1024} KB{page_info}). Use browser zoom, scroll, and toolbar controls inside the viewer.")
+
+        pdf_html = (
+            f'<div style="margin-top:6px; margin-bottom:12px; border-radius:8px; overflow:hidden; border:1px solid #cbd5e1; box-shadow:0 1px 3px rgba(0,0,0,0.08);">'
+            f'<iframe src="data:application/pdf;base64,{b64_pdf}#toolbar=1&navpanes=1&scrollbar=1" '
+            f'width="100%" height="{height}px" type="application/pdf" '
+            f'style="border:none; width:100%; height:{height}px;">'
+            f'<p>Your browser does not support inline PDF viewing. Please click the Download button above to view the file.</p>'
+            f'</iframe>'
+            f'</div>'
+        )
+        st.markdown(pdf_html, unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"Failed to generate document preview: {e}")
+
 @st.cache_data(ttl=300)
 def get_cached_academics_subjects(_db, branch, semester):
     try:
@@ -1080,6 +1114,15 @@ def render_subject_assistance_fragment(pipeline, db):
                                         key=f"dl_syl_note_{unote['id']}_{unit_num}",
                                         use_container_width=True
                                     )
+
+                            fp = unote.get("abs_filepath")
+                            if fp and os.path.exists(fp):
+                                is_pdf = (unote.get("file_type") or "").lower() == "pdf"
+                                with st.expander(f"👁️ Preview: {unote['filename']}", expanded=False):
+                                    if is_pdf:
+                                        render_pdf_preview_element(fp, height=550)
+                                    else:
+                                        st.info(f"📄 Word document format (`.{unote.get('file_type', 'doc')}`). Please use the **⬇️ Download** button above to open.")
         else:
             st.info(f"Detailed unit breakdown for '{resolved_title}' is not currently indexed in the syllabus table. You can still use the **Notes & Materials**, **Explain a Topic**, **Practice**, and **Ask a Doubt** tabs!")
 
@@ -1150,18 +1193,34 @@ def render_subject_assistance_fragment(pipeline, db):
             else:
                 for note in filtered_notes:
                     with st.container(border=True):
+                        fp = note.get("abs_filepath")
+                        file_exists = fp and os.path.exists(fp)
+                        is_pdf = (note.get("file_type") or "").lower() == "pdf"
+
+                        # Extract page count if PDF
+                        page_count = None
+                        if is_pdf and file_exists:
+                            try:
+                                import fitz
+                                with fitz.open(fp) as doc:
+                                    page_count = len(doc)
+                            except Exception:
+                                pass
+
                         c_card_info, c_card_dl = st.columns([3.5, 1.2])
                         with c_card_info:
                             unit_label = f"Unit {note['unit_number']}" if note.get('unit_number') else "General / Reference"
                             badge_unit_color = "#2563eb" if note.get('unit_number') else "#64748b"
                             cat_name = note.get('category', 'Study Material')
+                            pages_badge = f"<span style='background:#fef3c7; color:#92400e; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600;'>📑 {page_count} Pages</span> " if page_count else ""
 
                             st.markdown(f"##### 📄 {note['title']}")
 
                             badges_line = (
                                 f"<span style='background:#eff6ff; color:{badge_unit_color}; border:1px solid #bfdbfe; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600;'>{unit_label}</span> "
                                 f"<span style='background:#f1f5f9; color:#334155; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:500;'>{cat_name}</span> "
-                                f"<span style='background:#ecfdf5; color:#065f46; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600;'>{note.get('file_type', 'pdf').upper()} • {note.get('formatted_size', '')}</span>"
+                                f"<span style='background:#ecfdf5; color:#065f46; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600;'>{note.get('file_type', 'pdf').upper()} • {note.get('formatted_size', '')}</span> "
+                                f"{pages_badge}"
                             )
                             st.markdown(badges_line, unsafe_allow_html=True)
 
@@ -1169,20 +1228,28 @@ def render_subject_assistance_fragment(pipeline, db):
                                 st.caption(f"📁 {note['description']}")
 
                         with c_card_dl:
-                            fp = note.get("abs_filepath")
-                            if fp and os.path.exists(fp):
+                            if file_exists:
                                 with open(fp, "rb") as f_obj:
                                     note_bytes = f_obj.read()
                                 st.download_button(
                                     label="⬇️ Download",
                                     data=note_bytes,
                                     file_name=note["filename"],
-                                    mime="application/pdf" if note.get("file_type") == "pdf" else "application/octet-stream",
+                                    mime="application/pdf" if is_pdf else "application/octet-stream",
                                     key=f"dl_tab_note_{note['id']}",
                                     use_container_width=True
                                 )
                             else:
                                 st.caption("⚠️ File missing")
+
+                        # On-demand Document Preview Expander
+                        if file_exists:
+                            expander_label = f"👁️ Preview PDF Document: {note['filename']}" if is_pdf else f"👁️ Document Details: {note['filename']}"
+                            with st.expander(expander_label, expanded=False):
+                                if is_pdf:
+                                    render_pdf_preview_element(fp, height=650)
+                                else:
+                                    st.info(f"📄 **{note['filename']}** is a Word document format (`.{note.get('file_type', 'doc')}`). Browsers cannot preview Word documents natively. Please click the **⬇️ Download** button above to open it in Microsoft Word, LibreOffice, or Google Docs.")
         else:
             st.info(f"ℹ️ No dedicated lecture notes or materials are currently indexed for **{resolved_title}** in **{selected_branch} Semester {selected_sem}**.")
 
