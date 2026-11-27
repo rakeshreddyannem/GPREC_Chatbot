@@ -1957,6 +1957,25 @@ class DatabaseManager:
                             units_by_num[u_num] = r
                     rows = [units_by_num[k] for k in sorted(units_by_num.keys(), key=lambda x: (x is None, x or 0))]
 
+            # Fallback 3: Special domain fallbacks (e.g. Quantum Technologies & Applications)
+            if not rows and (course_code == "BS301" or (course_title and "quantum" in course_title.lower())):
+                cursor.execute("""
+                    SELECT id, regulation, branch, year, semester, course_code, course_title,
+                           category, credits, ltp, unit_number, unit_title, topics,
+                           textbooks, outcomes, exam_scheme, needs_review, document_url, page_num
+                    FROM syllabus
+                    WHERE course_title LIKE '%Quantum Technologies and Applications%'
+                    ORDER BY unit_number ASC
+                """)
+                q_rows = [dict(row) for row in cursor.fetchall()]
+                if q_rows:
+                    units_by_num = {}
+                    for r in q_rows:
+                        u_num = r.get("unit_number")
+                        if u_num not in units_by_num or len(r.get("topics") or "") > len(units_by_num[u_num].get("topics") or ""):
+                            units_by_num[u_num] = r
+                    rows = [units_by_num[k] for k in sorted(units_by_num.keys(), key=lambda x: (x is None, x or 0))]
+
             if branch:
                 from src.curated_links import get_branch_latest_syllabus_pdf, is_cross_branch_url
                 for r in rows:
@@ -2258,7 +2277,7 @@ class DatabaseManager:
                 actual_title = matched_syl.get("course_title") if matched_syl else clean_name
                 actual_code = matched_syl.get("course_code") if (matched_syl and matched_syl.get("course_code")) else code
 
-                label_code = f"{actual_code} - " if actual_code else ""
+                label_code = f"{actual_code} - " if actual_code and actual_code.upper() not in ("MENTOR", "OTHER", "CUSTOM") else ""
                 display_label = f"{label_code}{actual_title}"
 
                 if actual_code and actual_code.upper() in seen_codes:

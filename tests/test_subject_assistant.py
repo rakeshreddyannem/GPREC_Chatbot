@@ -784,6 +784,63 @@ def test_get_note_by_id():
     assert "formatted_size" in note
 
 
+def test_eee_semesters_3_5_7_exact_subject_lists():
+    """Verify that EEE Semesters 3, 5, and 7 contain exactly the official timetable subjects."""
+    db = DatabaseManager()
+
+    # Semester 3
+    subs3 = db.get_subject_assistance_subjects("EEE", 3, "2023")
+    assert len(subs3) == 10
+    titles3 = [s["course_title"] for s in subs3]
+    assert any("COMPLEX VARIABLES" in t.upper() for t in titles3)
+    assert any("UNIVERSAL HUMAN VALUES" in t.upper() for t in titles3)
+    assert any("ELECTROMAGNETIC FIELD" in t.upper() for t in titles3)
+    assert any("ELECTRICAL CIRCUIT ANALYSIS-II" in t.upper() for t in titles3)
+    assert any("DC MACHINES & TRANSFORMERS" in t.upper() for t in titles3)
+    assert any("DATA STRUCTURES" in t.upper() for t in titles3)
+    assert any("DESIGN THINKING" in t.upper() for t in titles3)
+    assert any("MOOCS" in t.upper() or "MASSIVE OPEN" in t.upper() for t in titles3)
+    # Ensure removed subjects are absent
+    assert not any("SOFTWARE ENGINEERING" in t.upper() for t in titles3)
+    assert not any("TRADITIONAL KNOWLEDGE" in t.upper() for t in titles3)
+
+    # Semester 5
+    subs5 = db.get_subject_assistance_subjects("EEE", 5, "2023")
+    assert len(subs5) == 10
+    titles5 = [s["course_title"] for s in subs5]
+    assert any("POWER ELECTRONICS" in t.upper() for t in titles5)
+    assert any("DIGITAL CIRCUITS" in t.upper() for t in titles5)
+    assert any("POWER SYSTEMS" in t.upper() for t in titles5)
+    assert any("QUANTUM" in t.upper() for t in titles5)
+    assert any("SIGNAL" in t.upper() for t in titles5)
+    assert any("PYTHON" in t.upper() for t in titles5)
+    assert any("TINKERING" in t.upper() for t in titles5)
+    assert any("MOOCS" in t.upper() or "MASSIVE OPEN" in t.upper() for t in titles5)
+    # Ensure removed subjects are absent
+    assert not any("SAFETY AND RISK" in t.upper() for t in titles5)
+    assert not any("MODERN CONTROL" in t.upper() for t in titles5)
+
+    # Semester 7
+    subs7 = db.get_subject_assistance_subjects("EEE", 7, "2023")
+    assert len(subs7) == 10
+    titles7 = [s["course_title"] for s in subs7]
+    assert any("POWER SYSTEM OPERATION" in t.upper() for t in titles7)
+    assert any("MANAGEMENT SCIENCE" in t.upper() for t in titles7)
+    assert any("DIGITAL SIGNAL PROCESSING" in t.upper() for t in titles7)
+    assert any("UTILIZATION OF ELECTRICAL" in t.upper() for t in titles7)
+    assert any("OPEN ELECTIVE-III" in t.upper() for t in titles7)
+    assert any("OPEN ELECTIVE-IV" in t.upper() for t in titles7)
+    assert any("CONSTITUTION OF INDIA" in t.upper() for t in titles7)
+    assert any("POWER SYSTEMS AND SIMULATION" in t.upper() or "SIMULATION LAB" in t.upper() for t in titles7)
+    assert any("PROJECT" in t.upper() for t in titles7)
+    assert any("MENTOR" in t.upper() for t in titles7)
+    # Ensure removed subjects are absent
+    assert not any("ELECTRIC VEHICLE" in t.upper() for t in titles7)
+    assert not any("HVDC" in t.upper() for t in titles7)
+    assert not any("BUSINESS ETHICS" in t.upper() for t in titles7)
+
+
+
 
 
 
