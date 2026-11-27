@@ -1,4 +1,5 @@
 import sys
+import os
 import sqlite3
 import json
 import re
@@ -318,6 +319,27 @@ class DatabaseManager:
                 )
             """)
 
+            # 16. Subject Notes Table (Semester-wise study materials, lecture PDFs, question banks)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS subject_notes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    branch TEXT NOT NULL,
+                    semester INTEGER NOT NULL,
+                    subject_folder TEXT NOT NULL,
+                    course_title TEXT NOT NULL,
+                    unit_number INTEGER,
+                    title TEXT NOT NULL,
+                    filename TEXT NOT NULL,
+                    filepath TEXT NOT NULL,
+                    file_size INTEGER DEFAULT 0,
+                    file_type TEXT,
+                    category TEXT,
+                    description TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(branch, semester, subject_folder, filename)
+                )
+            """)
+
             try:
                 cursor.execute("ALTER TABLE syllabus_sources ADD COLUMN content_hash TEXT")
             except Exception:
@@ -336,6 +358,8 @@ class DatabaseManager:
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_syllabus_upsert_lookup ON syllabus(branch, regulation, course_code, unit_number)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_timetable_lookup ON timetable_subjects(branch, semester, course_code)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_logs_timestamp ON chat_logs(timestamp)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_subject_notes_lookup ON subject_notes(branch, semester, course_title)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_subject_notes_unit ON subject_notes(branch, semester, unit_number)")
             except Exception:
                 pass
 
@@ -394,6 +418,7 @@ class DatabaseManager:
             self._seed_verified_facts()
             self._seed_entity_directory()
             self._seed_default_notices()
+            self.sync_subject_notes()
         except Exception as e:
             logger.warning(f"Database seed initialization skipped (read-mostly mode): {e}")
 
@@ -2387,6 +2412,280 @@ class DatabaseManager:
         except Exception as e:
             logger.warning(f"Failed to get feedback counts: {e}")
             return {1: 0, -1: 0}
+
+    # -------------------------------------------------------------
+    # SUBJECT NOTES & STUDY MATERIALS
+    # -------------------------------------------------------------
+
+    def sync_subject_notes(self, notes_dir: Optional[Path] = None) -> int:
+        """
+        Scans Subject_notes_pdfs_semester_Wise directory and indexes all semester-wise
+        subject notes, lecture PDFs, and question banks into the subject_notes table.
+        """
+        target_dir = Path(notes_dir or getattr(config, "NOTES_DIR", config.BASE_DIR / "Subject_notes_pdfs_semester_Wise"))
+        if not target_dir.exists():
+            return 0
+
+        folder_map = {
+            # 3rd Sem
+            ("EEE", 3, "electromagnetic field"): {
+                "primary_title": "ELECTROMAGNETIC FIELD THEORY (EMF)",
+                "aliases": ["ELECTROMAGNETIC FIELDS (EMF)", "ELECTROMAGNETIC FIELD THEORY", "EMF"]
+            },
+            ("EEE", 3, "universal human values"): {
+                "primary_title": "UNIVERSAL HUMAN VALUES",
+                "aliases": ["UNIVERSAL HUMAN VALUES - 2 (UHV2)", "UHV", "UHV2"]
+            },
+            # 4th Sem
+            ("EEE", 4, "analog circuits"): {
+                "primary_title": "ANALOG CIRCUITS (AC)",
+                "aliases": ["ANALOG CIRCUITS", "AC", "ANALOG AND DIGITAL CIRCUITS LAB (ADC (P))"]
+            },
+            ("EEE", 4, "control systems"): {
+                "primary_title": "CONTROL SYSTEMS ENGINEERING (CSE)",
+                "aliases": ["CONTROL SYSTEMS DESIGN (CSD)", "CONTROL SYSTEMS", "CS", "CSE", "DIGITAL CONTROL SYSTEMS (DCS)"]
+            },
+            ("EEE", 4, "induction and synchronous machines"): {
+                "primary_title": "INDUCTION AND SYNCHRONOUS MACHINES (ISM)",
+                "aliases": ["ELECTRICAL MACHINES - II (EMC-II)", "ELECTRICAL MACHINES-II", "ISM", "ELECTRICAL MACHINES-I"]
+            },
+            # 5th Sem
+            ("EEE", 5, "power systems-2"): {
+                "primary_title": "POWER SYSTEMS - II (PS-II)",
+                "aliases": ["POWER SYSTEMS-II (PS2)", "POWER SYSTEMS-II", "POWER SYSTEMS-I (PS-I)", "POWER SYSTEMS-I (PS1)", "PS-II", "PS2", "PS1"]
+            },
+            ("EEE", 5, "introduction to python programming"): {
+                "primary_title": "INTRODUCTION TO PYTHON PROGRAMMING (IPP)",
+                "aliases": ["INTRODUCTION TO PYTHON PROGRAMMING (IPP(P))", "PYTHON PROGRAMMING", "IPP", "SPY"]
+            },
+            ("EEE", 5, "introduction to quantum technologies"): {
+                "primary_title": "INTRODUCTION TO QUANTUM MECHANICS (IQM)",
+                "aliases": ["MATHEMATICAL FOUNDATION OF QUANTUM TECHNOLOGIES (MFQT)", "QUANTUM COMPUTING (QC)", "QUANTUM TECHNOLOGIES", "IQTA", "IQM"]
+            },
+            # 6th Sem
+            ("EEE", 6, "electical measuring instruments"): {
+                "primary_title": "ELECTRICAL MEASUREMENTS AND INSTRUMENTATION (EMI)",
+                "aliases": ["ELECTRICAL & ELECTRONIC MEASURING INSTRUMENTS (EEMI)", "EMI", "EEMI", "MEASURING INSTRUMENTS"]
+            },
+            ("EEE", 6, "switch gear and protection"): {
+                "primary_title": "SWITCHGEAR AND PROTECTION (SGP)",
+                "aliases": ["SWITCHGEAR AND PROTECTION", "SGP"]
+            },
+            # 7th Sem
+            ("EEE", 7, "elements of digital signal processing"): {
+                "primary_title": "ELEMENTS OF DIGITAL SIGNAL PROCESSING (EDSP)",
+                "aliases": ["DIGITAL SIGNAL PROCESSING (DSP)", "EDSP", "DSP"]
+            },
+            ("EEE", 7, "management science"): {
+                "primary_title": "MANAGEMENT SCIENCE (MS)",
+                "aliases": ["MANAGEMENT SCIENCE", "MS"]
+            },
+            ("EEE", 7, "power systems operation and control"): {
+                "primary_title": "POWER SYSTEM OPERATION AND CONTROL (PSOC)",
+                "aliases": ["POWER SYSTEM OPERATION AND CONTROL", "PSOC", "SMART GRID TECHNOLOGIES (SGT)", "SMART GRIDS"]
+            },
+            ("EEE", 7, "utilization of electrical energy(uee)"): {
+                "primary_title": "UTILIZATION OF ELECTRICAL ENERGY (UEE)",
+                "aliases": ["UTILIZATION OF ELECRICAL POWER (UEP)", "UEE", "UEP"]
+            }
+        }
+
+        roman_map = {'i': 1, 'ii': 2, 'iii': 3, 'iv': 4, 'v': 5}
+
+        def _extract_unit(fname: str) -> Optional[int]:
+            m = re.search(r'\bunit[\s\-_]*([1-5]|i{1,3}|iv|v)\b', fname, re.IGNORECASE)
+            if m:
+                val = m.group(1).lower()
+                return roman_map.get(val, int(val) if val.isdigit() else None)
+            m_digit = re.search(r'\bunit[\s\-_]*([1-5])', fname, re.IGNORECASE)
+            if m_digit:
+                return int(m_digit.group(1))
+            return None
+
+        def _get_category(fname: str) -> str:
+            fl = fname.lower()
+            if any(k in fl for k in ['question', 'model', 'bank', 'important']):
+                return "Question Bank / Model Paper"
+            if any(k in fl for k in ['text book', 'textbook']):
+                return "Textbook / Reference Book"
+            if any(k in fl for k in ['code', 'matplot', 'numpy', 'ex codes']):
+                return "Practical / Code Examples"
+            if any(k in fl for k in ['unit', 'notes', 'meterial', 'material', 'lecture']):
+                return "Unit Lecture Notes"
+            return "Topic Notes / Reference"
+
+        count = 0
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                for root, dirs, files in os.walk(target_dir):
+                    for f in files:
+                        full_p = Path(root) / f
+                        try:
+                            rel_p = full_p.relative_to(target_dir)
+                        except Exception:
+                            continue
+                        parts = rel_p.parts
+                        if len(parts) < 3:
+                            continue
+                        branch = parts[0].upper()
+                        sem_str = parts[1]
+                        sem_num_m = re.search(r'\d+', sem_str)
+                        sem_num = int(sem_num_m.group(0)) if sem_num_m else 1
+                        subject_folder = parts[2]
+
+                        map_key = (branch, sem_num, subject_folder.lower().strip())
+                        info = folder_map.get(map_key, {})
+                        course_title = info.get("primary_title", subject_folder.upper())
+
+                        unit_num = _extract_unit(f)
+                        category = _get_category(f)
+                        ext = os.path.splitext(f)[1].lower().lstrip(".")
+                        size_bytes = full_p.stat().st_size
+                        title = os.path.splitext(f)[0].replace('_', ' ').replace('-', ' ').strip()
+
+                        # Store relative posix path for portability
+                        rel_to_base = full_p.relative_to(config.BASE_DIR).as_posix() if config.BASE_DIR in full_p.parents else str(full_p.as_posix())
+
+                        cursor.execute("""
+                            INSERT INTO subject_notes (
+                                branch, semester, subject_folder, course_title, unit_number,
+                                title, filename, filepath, file_size, file_type, category, description
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ON CONFLICT(branch, semester, subject_folder, filename) DO UPDATE SET
+                                course_title=excluded.course_title,
+                                unit_number=excluded.unit_number,
+                                title=excluded.title,
+                                filepath=excluded.filepath,
+                                file_size=excluded.file_size,
+                                file_type=excluded.file_type,
+                                category=excluded.category
+                        """, (
+                            branch, sem_num, subject_folder, course_title, unit_num,
+                            title, f, rel_to_base, size_bytes, ext, category,
+                            f"Official {branch} study notes and lecture materials for {course_title} (Semester {sem_num})"
+                        ))
+                        count += 1
+                conn.commit()
+        except Exception as e:
+            logger.warning(f"Error syncing subject notes: {e}")
+        return count
+
+    def get_subject_notes(
+        self, 
+        branch: str, 
+        semester: int, 
+        course_title: Optional[str] = None, 
+        unit_number: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieves indexed subject notes, lecture PDFs, and question banks for a branch and semester.
+        Matches canonical course titles, folder names, and subject abbreviations.
+        """
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                query = "SELECT * FROM subject_notes WHERE branch = ? AND semester = ?"
+                params = [branch.upper(), int(semester)]
+
+                if unit_number is not None:
+                    query += " AND unit_number = ?"
+                    params.append(int(unit_number))
+
+                query += " ORDER BY CASE WHEN unit_number IS NULL THEN 999 ELSE unit_number END ASC, title ASC"
+                cursor.execute(query, params)
+                rows = [dict(r) for r in cursor.fetchall()]
+
+                # Add formatted file size and absolute path
+                for r in rows:
+                    sb = r.get("file_size", 0)
+                    if sb >= 1024 * 1024:
+                        r["formatted_size"] = f"{sb / (1024 * 1024):.1f} MB"
+                    else:
+                        r["formatted_size"] = f"{max(1, sb // 1024)} KB"
+
+                    r["file_type"] = (r.get("file_type") or "").lstrip(".")
+
+                    # Resolve absolute path
+                    fp = r.get("filepath", "")
+                    p = Path(fp)
+                    if not p.is_absolute():
+                        p = config.BASE_DIR / p
+                    r["abs_filepath"] = str(p.resolve())
+                    r["file_exists"] = p.exists()
+
+                if not course_title:
+                    return rows
+
+                # Filter matching course_title
+                ct_clean = course_title.lower().replace("-", " ").replace("(", " ").replace(")", " ")
+                ct_tokens = [w for w in ct_clean.split() if len(w) > 2]
+
+                matched = []
+                for r in rows:
+                    row_ct = r["course_title"].lower().replace("-", " ").replace("(", " ").replace(")", " ")
+                    row_sf = r["subject_folder"].lower().replace("-", " ").replace("(", " ").replace(")", " ")
+
+                    # 1. Direct equality or substring containment
+                    if r["course_title"].lower() == course_title.lower() or row_sf in ct_clean or ct_clean in row_sf:
+                        matched.append(r)
+                        continue
+
+                    # 2. Token overlap
+                    overlap = [t for t in ct_tokens if t in row_ct or t in row_sf]
+                    if len(overlap) >= 2 or (len(ct_tokens) == 1 and len(overlap) == 1):
+                        matched.append(r)
+
+                return matched
+        except Exception as e:
+            logger.warning(f"Error querying subject_notes: {e}")
+            return []
+
+    def get_available_note_courses_for_semester(self, branch: str, semester: int) -> List[Dict[str, Any]]:
+        """Returns distinct courses that have notes uploaded in this semester."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT course_title, subject_folder, COUNT(*) as note_count,
+                           SUM(file_size) as total_size,
+                           GROUP_CONCAT(DISTINCT category) as categories
+                    FROM subject_notes
+                    WHERE branch = ? AND semester = ?
+                    GROUP BY course_title, subject_folder
+                    ORDER BY course_title ASC
+                """, (branch.upper(), int(semester)))
+                results = []
+                for r in cursor.fetchall():
+                    item = dict(r)
+                    ts = item.get("total_size", 0) or 0
+                    item["formatted_size"] = f"{ts / (1024 * 1024):.1f} MB" if ts >= 1024 * 1024 else f"{max(1, ts // 1024)} KB"
+                    results.append(item)
+                return results
+        except Exception as e:
+            logger.warning(f"Error querying available note courses: {e}")
+            return []
+
+    def get_note_by_id(self, note_id: int) -> Optional[Dict[str, Any]]:
+        """Fetches a single note record by its ID."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM subject_notes WHERE id = ?", (int(note_id),))
+                row = cursor.fetchone()
+                if row:
+                    res = dict(row)
+                    sb = res.get("file_size", 0)
+                    res["formatted_size"] = f"{sb / (1024 * 1024):.1f} MB" if sb >= 1024 * 1024 else f"{max(1, sb // 1024)} KB"
+                    p = Path(res.get("filepath", ""))
+                    if not p.is_absolute():
+                        p = config.BASE_DIR / p
+                    res["abs_filepath"] = str(p.resolve())
+                    res["file_exists"] = p.exists()
+                    return res
+        except Exception as e:
+            logger.warning(f"Error fetching note by id {note_id}: {e}")
+        return None
 
 
 if __name__ == "__main__":

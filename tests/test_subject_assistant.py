@@ -23,7 +23,8 @@ from src.subject_assistant import (
     answer_subject_doubt,
     clean_subject_response,
     extract_mcq_json,
-    generate_subject_mcqs
+    generate_subject_mcqs,
+    generate_subject_short_answers
 )
 
 
@@ -494,6 +495,296 @@ def test_generate_subject_mcqs_for_oopj_and_domain():
     ds_mcqs = generate_subject_mcqs("Advanced Data Structures", "Unit 3: Balanced Trees", count=4)
     assert len(ds_mcqs) == 4
     assert any("avl" in q["question"].lower() or "heap" in q["question"].lower() or "tree" in q["question"].lower() for q in ds_mcqs)
+
+
+# ---------------------------------------------------------------------------
+# 17. EEE SUBJECTS RECEIVE DOMAIN-SPECIFIC MCQS (NOT GENERIC CIRCUITS)
+# ---------------------------------------------------------------------------
+
+def test_generate_subject_mcqs_eee_subjects_domain_specific():
+    """Verify that EEE subjects receive domain-accurate questions and not generic circuit/diode questions."""
+    # 1. Power Systems (PS-II)
+    ps_mcqs = generate_subject_mcqs(
+        "POWER SYSTEMS - II (PS-II)", 
+        "Unit 1: Transmission Line Parameters", 
+        "Types of Conductors, Calculation of Resistance, Bundle Conductors, Skin effect, Proximity effect, GMR and GMD", 
+        count=5
+    )
+    assert len(ps_mcqs) == 5
+    ps_text = " ".join(q["question"].lower() for q in ps_mcqs)
+    assert any(w in ps_text for w in ["ferranti", "conductor", "bundle", "skin effect", "surge impedance", "insulator", "corona"])
+    # Must NOT be the old generic circuit questions
+    assert "thevenin" not in ps_text
+    assert "kirchhoff's current law" not in ps_text
+
+    # 2. Electrical Machines-I
+    emc_mcqs = generate_subject_mcqs(
+        "ELECTRICAL MACHINES-I", 
+        "Unit 1: Electromechanical Energy Conversion", 
+        "Forces and torques in magnetic field system, energy balance, singly and multiply excited magnetic systems", 
+        count=5
+    )
+    assert len(emc_mcqs) == 5
+    emc_text = " ".join(q["question"].lower() for q in emc_mcqs)
+    assert any(w in emc_text for w in ["back emf", "transformer", "induction motor", "torque", "synchronous", "governor"])
+    assert "thevenin" not in emc_text
+
+    # 3. Modern Control Theory (MCTH)
+    mcth_mcqs = generate_subject_mcqs(
+        "MODERN CONTROL THEORY (MCTH)", 
+        "Unit 1: Controllability and Observability", 
+        "Concepts of controllability and observability, Controllability tests, Kalman test, Gilbert test", 
+        count=5
+    )
+    assert len(mcth_mcqs) == 5
+    mcth_text = " ".join(q["question"].lower() for q in mcth_mcqs)
+    assert any(w in mcth_text for w in ["kalman", "controllability", "state transition", "routh", "bode", "observability"])
+
+    # 4. Power Electronics (PE)
+    pe_mcqs = generate_subject_mcqs(
+        "POWER ELECTRONICS(PE)", 
+        "Unit 1: Basics of Power Electronics", 
+        "Introduction to power electronics, power semiconductor switches, Diodes, Thyristor, SCR, MOSFET, IGBT", 
+        count=5
+    )
+    assert len(pe_mcqs) == 5
+    pe_text = " ".join(q["question"].lower() for q in pe_mcqs)
+    assert any(w in pe_text for w in ["latching current", "holding current", "snubber", "buck", "thyristor", "rectifier"])
+
+    # 5. Measurements and Instrumentation (EMI)
+    emi_mcqs = generate_subject_mcqs(
+        "ELECTRICAL MEASUREMENTS AND INSTRUMENTATION (EMI)", 
+        "Unit 1: Measuring Instruments & Digital Meters", 
+        "Fundamentals: Errors, Static Characteristics, PMMC instruments, Moving Iron", 
+        count=5
+    )
+    assert len(emi_mcqs) == 5
+    emi_text = " ".join(q["question"].lower() for q in emi_mcqs)
+    assert any(w in emi_text for w in ["pmmc", "moving iron", "wattmeter", "voltmeter", "bridge", "lvdt"])
+
+    # 6. Electromagnetic Field Theory (EMF)
+    emf_mcqs = generate_subject_mcqs(
+        "ELECTROMAGNETIC FIELD THEORY (EMF)", 
+        "Unit 1: Vector Algebra", 
+        "Scalars and Vectors, Unit vector, Vector addition, Coulomb's Law, Gauss's law", 
+        count=5
+    )
+    assert len(emf_mcqs) == 5
+    emf_text = " ".join(q["question"].lower() for q in emf_mcqs)
+    assert any(w in emf_text for w in ["maxwell", "poynting", "ampere", "skin depth", "dielectric", "coulomb"])
+
+
+# ---------------------------------------------------------------------------
+# 18. CIVIL, MECHANICAL, AND ECE DOMAIN-SPECIFIC MCQS
+# ---------------------------------------------------------------------------
+
+def test_generate_subject_mcqs_civil_mech_ece_domain_specific():
+    """Verify that Civil, Mechanical, and ECE departments receive domain-specific questions."""
+    # Civil - Surveying
+    ce_mcqs = generate_subject_mcqs(
+        "SURVEYING", 
+        "Unit 1: Chain and Compass Surveying", 
+        "Principles of surveying, Chain surveying, Compass surveying, Prismatic compass, Local attraction", 
+        count=5
+    )
+    assert len(ce_mcqs) == 5
+    ce_text = " ".join(q["question"].lower() for q in ce_mcqs)
+    assert any(w in ce_text for w in ["bearing", "local attraction", "leveling", "compass", "curvature", "surveying"])
+
+    # Mechanical - Thermodynamics
+    me_mcqs = generate_subject_mcqs(
+        "THERMODYNAMICS", 
+        "Unit 1: Basic Concepts and First Law", 
+        "System, Boundary, Surroundings, Thermodynamic equilibrium, Zeroth law, First law of thermodynamics, Heat and Work", 
+        count=5
+    )
+    assert len(me_mcqs) == 5
+    me_text = " ".join(q["question"].lower() for q in me_mcqs)
+    assert any(w in me_text for w in ["first law", "carnot", "clausius", "otto", "throttling", "entropy"])
+
+    # ECE - VLSI Design
+    ece_mcqs = generate_subject_mcqs(
+        "VLSI DESIGN", 
+        "Unit 1: MOS Transistor Theory", 
+        "MOS Transistor Theory: nMOS, pMOS, CMOS fabrication, Inverter voltage transfer characteristics", 
+        count=5
+    )
+    assert len(ece_mcqs) == 5
+    ece_text = " ".join(q["question"].lower() for q in ece_mcqs)
+    assert any(w in ece_text for w in ["cmos", "pmos", "setup time", "power", "stick", "vlsi"])
+
+
+# ---------------------------------------------------------------------------
+# 19. SEED-BASED QUESTION REGENERATION AND OPTION SHUFFLING
+# ---------------------------------------------------------------------------
+
+def test_generate_subject_mcqs_seed_variety_and_shuffling():
+    """Verify that different seeds produce fresh questions and randomized option placements."""
+    mcqs_seed1 = generate_subject_mcqs("POWER SYSTEMS - II (PS-II)", "Unit 1: Transmission Line Parameters", count=4, seed=123)
+    mcqs_seed2 = generate_subject_mcqs("POWER SYSTEMS - II (PS-II)", "Unit 1: Transmission Line Parameters", count=4, seed=987)
+
+    assert len(mcqs_seed1) == 4
+    assert len(mcqs_seed2) == 4
+
+    # Option keys must always be A, B, C, D
+    for q in mcqs_seed1 + mcqs_seed2:
+        assert set(q["options"].keys()) >= {"A", "B", "C", "D"}
+        assert q["correct_option"] in {"A", "B", "C", "D"}
+        # Correct option key must point to the correct text
+        assert len(q["options"][q["correct_option"]]) > 0
+
+    q1_text = [q["question"] for q in mcqs_seed1]
+    q2_text = [q["question"] for q in mcqs_seed2]
+    # Either the questions selected are different or the options are in a different permutation
+    assert q1_text != q2_text or mcqs_seed1[0]["options"] != mcqs_seed2[0]["options"]
+
+
+# ---------------------------------------------------------------------------
+# 20. PRACTICE PROMPT EMBEDS SEED AND DIVERSITY DIRECTIVE
+# ---------------------------------------------------------------------------
+
+def test_build_practice_prompt_with_seed():
+    """Verify build_practice_prompt accepts seed and adds diversity directive."""
+    _, usr_prompt = build_practice_prompt(
+        "POWER SYSTEMS - II", "Unit 1", 5, "Multiple Choice", 
+        unit_topics="Transmission line parameters", seed=4242
+    )
+    assert "4242" in usr_prompt
+    assert "Variation/Seed" in usr_prompt
+
+
+# ---------------------------------------------------------------------------
+# 21. SHORT ANSWER GENERATION ACROSS DOMAINS AND VARIETY
+# ---------------------------------------------------------------------------
+
+def test_generate_subject_short_answers_domain_specific_and_variety():
+    """Verify that short answers generate domain-specific derivations and step-by-step solutions with variety."""
+    # 1. EEE Power Systems
+    ps_sa = generate_subject_short_answers("POWER SYSTEMS - II (PS-II)", "Unit 1: Transmission Line Parameters", count=3, seed=12)
+    assert "### Question 1:" in ps_sa
+    assert "**Answer & Step-by-Step Solution:**" in ps_sa
+    assert "**Key Takeaway / Explanation:**" in ps_sa
+    assert VERIFICATION_LINE in ps_sa
+    ps_lower = ps_sa.lower()
+    assert any(k in ps_lower for k in ["ferranti", "insulator", "surge impedance", "corona", "transmission"])
+
+    # 2. Civil Surveying
+    ce_sa = generate_subject_short_answers("SURVEYING", "Unit 1: Chain and Compass", count=2, seed=34)
+    assert "### Question 1:" in ce_sa
+    ce_lower = ce_sa.lower()
+    assert any(k in ce_lower for k in ["bearing", "bending", "surveying", "quadrantal"])
+
+    # 3. Seed Variety
+    sa1 = generate_subject_short_answers("ELECTRICAL MACHINES-I", "Unit 1", count=2, seed=10)
+    sa2 = generate_subject_short_answers("ELECTRICAL MACHINES-I", "Unit 1", count=2, seed=90)
+    assert sa1 != sa2
+
+
+# ---------------------------------------------------------------------------
+# 22. SUBJECT NOTES AND MATERIALS INDEXING & RETRIEVAL
+# ---------------------------------------------------------------------------
+
+def test_subject_notes_retrieval_all_semesters():
+    """Verify that all 99 notes across EEE Semesters 3, 4, 5, 6, and 7 are indexed and retrievable."""
+    import os
+    db = DatabaseManager()
+
+    # Total notes indexed for EEE should be 99
+    all_eee_notes = db.get_subject_notes("EEE", 3) + \
+                    db.get_subject_notes("EEE", 4) + \
+                    db.get_subject_notes("EEE", 5) + \
+                    db.get_subject_notes("EEE", 6) + \
+                    db.get_subject_notes("EEE", 7)
+    assert len(all_eee_notes) == 99, f"Expected 99 EEE notes, got {len(all_eee_notes)}"
+
+    # Check key subjects
+    emf_notes = db.get_subject_notes("EEE", 3, "ELECTROMAGNETIC FIELD THEORY (EMF)")
+    assert len(emf_notes) == 8
+
+    ism_notes = db.get_subject_notes("EEE", 4, "INDUCTION AND SYNCHRONOUS MACHINES (ISM)")
+    assert len(ism_notes) == 22
+
+    ac_notes = db.get_subject_notes("EEE", 4, "ANALOG CIRCUITS (AC)")
+    assert len(ac_notes) == 5
+
+    cse_notes = db.get_subject_notes("EEE", 4, "CONTROL SYSTEMS ENGINEERING (CSE)")
+    assert len(cse_notes) == 2
+
+    psoc_notes = db.get_subject_notes("EEE", 7, "POWER SYSTEM OPERATION AND CONTROL (PSOC)")
+    assert len(psoc_notes) == 9
+
+    sgp_notes = db.get_subject_notes("EEE", 6, "SWITCHGEAR AND PROTECTION (SGP)")
+    assert len(sgp_notes) == 4
+
+    edsp_notes = db.get_subject_notes("EEE", 7, "ELEMENTS OF DIGITAL SIGNAL PROCESSING (EDSP)")
+    assert len(edsp_notes) == 7
+
+    ms_notes = db.get_subject_notes("EEE", 7, "MANAGEMENT SCIENCE (MS)")
+    assert len(ms_notes) == 6
+
+    uee_notes = db.get_subject_notes("EEE", 7, "UTILIZATION OF ELECTRICAL ENERGY (UEE)")
+    assert len(uee_notes) == 3
+
+
+def test_subject_notes_unit_filtering_and_file_existence():
+    """Verify unit-specific filtering and that physical note files exist on disk."""
+    import os
+    db = DatabaseManager()
+
+    # EMF Unit 1 and Unit 2 notes
+    emf_u1 = db.get_subject_notes("EEE", 3, "ELECTROMAGNETIC FIELD THEORY (EMF)", unit_number=1)
+    assert len(emf_u1) >= 1
+    for n in emf_u1:
+        assert n["unit_number"] == 1
+        assert os.path.exists(n["abs_filepath"]), f"File missing on disk: {n['abs_filepath']}"
+        assert n["file_size"] > 0
+        assert n["file_type"].lstrip(".") in ("pdf", "doc", "docx")
+        assert "formatted_size" in n
+
+    emf_u2 = db.get_subject_notes("EEE", 3, "ELECTROMAGNETIC FIELD THEORY (EMF)", unit_number=2)
+    assert len(emf_u2) == 2
+    for n in emf_u2:
+        assert n["unit_number"] == 2
+        assert os.path.exists(n["abs_filepath"])
+
+    # ISM Unit 1 notes
+    ism_u1 = db.get_subject_notes("EEE", 4, "INDUCTION AND SYNCHRONOUS MACHINES (ISM)", unit_number=1)
+    assert len(ism_u1) >= 1
+    for n in ism_u1:
+        assert n["unit_number"] == 1
+        assert os.path.exists(n["abs_filepath"])
+
+
+def test_available_note_courses_for_semester():
+    """Verify distinct course discovery with note counts and formatted sizes for a semester."""
+    db = DatabaseManager()
+
+    sem4_courses = db.get_available_note_courses_for_semester("EEE", 4)
+    assert len(sem4_courses) == 3
+    course_titles = [c["course_title"] for c in sem4_courses]
+    assert "ANALOG CIRCUITS (AC)" in course_titles
+    assert "CONTROL SYSTEMS ENGINEERING (CSE)" in course_titles
+    assert "INDUCTION AND SYNCHRONOUS MACHINES (ISM)" in course_titles
+
+    sem6_courses = db.get_available_note_courses_for_semester("EEE", 6)
+    assert len(sem6_courses) == 2
+    s6_titles = [c["course_title"] for c in sem6_courses]
+    assert any("MEASUR" in t for t in s6_titles)
+    assert any("SWITCHGEAR" in t for t in s6_titles)
+
+
+def test_get_note_by_id():
+    """Verify single note retrieval by ID."""
+    db = DatabaseManager()
+    note = db.get_note_by_id(1)
+    assert note is not None
+    assert "title" in note
+    assert "filename" in note
+    assert "abs_filepath" in note
+    assert "formatted_size" in note
+
+
+
 
 
 

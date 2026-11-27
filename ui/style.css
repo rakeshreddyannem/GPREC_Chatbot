@@ -1118,6 +1118,16 @@ small {
   font-weight: 600;
 }
 
+.badge-notes-count {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-sm);
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .subject-header-sub {
   font-size: 0.86rem;
   color: var(--slate-500);

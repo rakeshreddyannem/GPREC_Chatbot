@@ -3,6 +3,7 @@ import base64
 import os
 import json
 import re
+import time
 from datetime import datetime
 
 from src.subject_assistant import (
@@ -18,7 +19,8 @@ from src.subject_assistant import (
     answer_subject_doubt,
     clean_subject_response,
     extract_mcq_json,
-    generate_subject_mcqs
+    generate_subject_mcqs,
+    generate_subject_short_answers
 )
 from src.curated_links import (
     get_branch_latest_syllabus_pdf,
@@ -193,6 +195,25 @@ def get_cached_syllabus_units_for_course(_db, branch, semester, course_title, co
             course_title=course_title,
             course_code=course_code
         )
+    return []
+
+@st.cache_data(ttl=300)
+def get_cached_subject_notes(_db, branch, semester, course_title=None, unit_number=None):
+    fresh_db = _ensure_fresh_db(_db)
+    if hasattr(fresh_db, "get_subject_notes"):
+        return fresh_db.get_subject_notes(
+            branch=branch,
+            semester=semester,
+            course_title=course_title,
+            unit_number=unit_number
+        )
+    return []
+
+@st.cache_data(ttl=300)
+def get_cached_available_note_courses(_db, branch, semester):
+    fresh_db = _ensure_fresh_db(_db)
+    if hasattr(fresh_db, "get_available_note_courses_for_semester"):
+        return fresh_db.get_available_note_courses_for_semester(branch, semester)
     return []
 
 @st.cache_data(ttl=300)
@@ -822,6 +843,11 @@ def render_subject_assistance_fragment(pipeline, db):
     # Subject Key for separate message history and caching
     subject_key = f"{selected_branch}_{selected_scheme}_s{selected_sem}_{resolved_code}_{resolved_title}".replace(" ", "_")
 
+    # Fetch notes for this subject
+    subject_notes = []
+    if db and resolved_title:
+        subject_notes = get_cached_subject_notes(db, selected_branch, sem_int, course_title=resolved_title)
+
     # Render Compact Subject Header Card
     badges = []
     if is_running_subject:
@@ -832,6 +858,8 @@ def render_subject_assistance_fragment(pipeline, db):
         badges.append(f'<span class="badge-credit">Credits: {resolved_credits}</span>')
     if resolved_ltp and str(resolved_ltp).strip().lower() not in ("none", ""):
         badges.append(f'<span class="badge-ltp">L-T-P: {resolved_ltp}</span>')
+    if subject_notes:
+        badges.append(f'<span class="badge-notes-count">📑 {len(subject_notes)} Notes Available</span>')
     
     reg_label = resolved_regulation if any(k in str(resolved_regulation).lower() for k in ("scheme", "r-", "r2")) else f"Scheme-{resolved_regulation}"
     badges.append(f'<span class="badge-credit">{reg_label}</span>')
@@ -843,6 +871,8 @@ def render_subject_assistance_fragment(pipeline, db):
         unit_badge_text = "⚡ Running Course (Timetable)"
     else:
         unit_badge_text = "✍️ Custom Subject"
+
+    notes_sub_text = f"<span>•</span><span>📑 <b>{len(subject_notes)}</b> Notes & Materials</span>" if subject_notes else ""
     
     render_html_block(f"""
         <div class="subject-header-card">
@@ -860,14 +890,16 @@ def render_subject_assistance_fragment(pipeline, db):
                 <span>📅 Semester: <b>{selected_sem}</b></span>
                 <span>•</span>
                 <span>{unit_badge_text}</span>
+                {notes_sub_text}
             </div>
         </div>
     """)
 
-    # 3. Five Tabs
-    tab_doubt, tab_syllabus, tab_explain, tab_practice, tab_revision = st.tabs([
+    # 3. Six Tabs
+    tab_doubt, tab_syllabus, tab_notes, tab_explain, tab_practice, tab_revision = st.tabs([
         "💬 Ask a Doubt",
         "📖 Syllabus",
+        "📑 Notes & Materials",
         "💡 Explain a Topic",
         "✍️ Practice",
         "⚡ Quick Revision"
@@ -998,7 +1030,19 @@ def render_subject_assistance_fragment(pipeline, db):
                 outcomes = u.get("outcomes", "")
                 needs_rev = u.get("needs_review", 0)
 
-                with st.expander(f"Unit {unit_num}: {unit_title}", expanded=True):
+                # Check for unit-specific notes
+                unit_int = None
+                try:
+                    unit_int = int(unit_num)
+                except (ValueError, TypeError):
+                    pass
+
+                unit_notes = [n for n in subject_notes if n.get("unit_number") == unit_int] if unit_int is not None else []
+                unit_header = f"Unit {unit_num}: {unit_title}"
+                if unit_notes:
+                    unit_header += f"  (📑 {len(unit_notes)} Notes)"
+
+                with st.expander(unit_header, expanded=True):
                     if needs_rev == 1:
                         st.markdown("<div style='background-color:#fffbeb; color:#b45309; border:1px solid #fcd34d; border-radius:6px; padding:6px 10px; font-size:0.8rem; margin-bottom:8px;'>⚠️ Check this against the official syllabus</div>", unsafe_allow_html=True)
                     st.markdown(f"**Topics:**\n\n{topics}")
@@ -1007,8 +1051,155 @@ def render_subject_assistance_fragment(pipeline, db):
                     unit_co = extract_unit_outcome(outcomes, unit_num)
                     if unit_co:
                         st.markdown(f"**Course Outcomes (CO):**\n\n{unit_co}")
+
+                    if unit_notes:
+                        st.markdown("---")
+                        st.markdown(f"##### 📑 Unit {unit_num} Study Materials & Notes ({len(unit_notes)}):")
+                        for unote in unit_notes:
+                            c_u1, c_u2 = st.columns([3, 1])
+                            with c_u1:
+                                badge_bg = "#e0f2fe" if unote.get("file_type") == "pdf" else "#fef3c7"
+                                badge_fg = "#0369a1" if unote.get("file_type") == "pdf" else "#92400e"
+                                st.markdown(
+                                    f"📄 **{unote['title']}** "
+                                    f"<span style='background:{badge_bg}; color:{badge_fg}; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600;'>{unote.get('file_type', 'pdf').upper()}</span> "
+                                    f"<span style='color:#64748b; font-size:0.8rem;'>({unote.get('formatted_size', '')})</span><br>"
+                                    f"<span style='color:#64748b; font-size:0.8rem;'>Category: {unote.get('category', 'Lecture Notes')}</span>",
+                                    unsafe_allow_html=True
+                                )
+                            with c_u2:
+                                fp = unote.get("abs_filepath")
+                                if fp and os.path.exists(fp):
+                                    with open(fp, "rb") as f_obj:
+                                        u_bytes = f_obj.read()
+                                    st.download_button(
+                                        label="⬇️ Download",
+                                        data=u_bytes,
+                                        file_name=unote["filename"],
+                                        mime="application/pdf" if unote.get("file_type") == "pdf" else "application/octet-stream",
+                                        key=f"dl_syl_note_{unote['id']}_{unit_num}",
+                                        use_container_width=True
+                                    )
         else:
-            st.info(f"Detailed unit breakdown for '{resolved_title}' is not currently indexed in the syllabus table. You can still use the **Explain a Topic**, **Practice**, and **Ask a Doubt** tabs!")
+            st.info(f"Detailed unit breakdown for '{resolved_title}' is not currently indexed in the syllabus table. You can still use the **Notes & Materials**, **Explain a Topic**, **Practice**, and **Ask a Doubt** tabs!")
+
+    # -------------------------------------------------------------
+    # TAB C: Notes & Materials
+    # -------------------------------------------------------------
+    with tab_notes:
+        st.markdown(f"#### 📑 Official Lecture Notes & Study Materials")
+        st.markdown(f"Access and download course notes, unit modules, question banks, and reference materials for **{resolved_title}**.")
+
+        if subject_notes:
+            # Top summary box
+            total_size_mb = sum(n.get("file_size", 0) for n in subject_notes) / (1024 * 1024)
+            st.markdown(
+                f"<div style='background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; margin-bottom:14px; display:flex; gap:16px; flex-wrap:wrap; font-size:0.88rem;'>"
+                f"<span>📚 <b>Total Notes:</b> {len(subject_notes)} files</span>"
+                f"<span>•</span>"
+                f"<span>💾 <b>Total Size:</b> {total_size_mb:.1f} MB</span>"
+                f"<span>•</span>"
+                f"<span>🏛️ <b>Department:</b> {selected_branch} Semester {selected_sem}</span>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+
+            # Filter controls: Unit, Category, Search
+            f_col1, f_col2, f_col3 = st.columns([1.2, 1.3, 1.5])
+
+            available_units = sorted(list(set(n["unit_number"] for n in subject_notes if n.get("unit_number") is not None)))
+            unit_filter_options = ["All Units"] + [f"Unit {u}" for u in available_units]
+            if any(n.get("unit_number") is None for n in subject_notes):
+                unit_filter_options.append("General / Other")
+
+            available_cats = sorted(list(set(n["category"] for n in subject_notes if n.get("category"))))
+            cat_filter_options = ["All Categories"] + available_cats
+
+            with f_col1:
+                sel_unit_f = st.selectbox("Filter by Unit", unit_filter_options, key=f"notes_filter_unit_{subject_key}")
+            with f_col2:
+                sel_cat_f = st.selectbox("Filter by Category", cat_filter_options, key=f"notes_filter_cat_{subject_key}")
+            with f_col3:
+                notes_search_kw = st.text_input("🔍 Search notes", placeholder="Search filename or topic...", key=f"notes_search_kw_{subject_key}")
+
+            # Apply filters
+            filtered_notes = subject_notes
+            if sel_unit_f != "All Units":
+                if sel_unit_f == "General / Other":
+                    filtered_notes = [n for n in filtered_notes if n.get("unit_number") is None]
+                else:
+                    u_target = int(sel_unit_f.replace("Unit ", "").strip())
+                    filtered_notes = [n for n in filtered_notes if n.get("unit_number") == u_target]
+
+            if sel_cat_f != "All Categories":
+                filtered_notes = [n for n in filtered_notes if n.get("category") == sel_cat_f]
+
+            if notes_search_kw and notes_search_kw.strip():
+                kw_lower = notes_search_kw.strip().lower()
+                filtered_notes = [
+                    n for n in filtered_notes 
+                    if kw_lower in n.get("title", "").lower() 
+                    or kw_lower in n.get("filename", "").lower()
+                    or kw_lower in n.get("description", "").lower()
+                ]
+
+            st.caption(f"Showing {len(filtered_notes)} of {len(subject_notes)} files:")
+
+            if not filtered_notes:
+                st.info("No notes match your selected filters. Try choosing 'All Units' or 'All Categories'.")
+            else:
+                for note in filtered_notes:
+                    with st.container(border=True):
+                        c_card_info, c_card_dl = st.columns([3.5, 1.2])
+                        with c_card_info:
+                            unit_label = f"Unit {note['unit_number']}" if note.get('unit_number') else "General / Reference"
+                            badge_unit_color = "#2563eb" if note.get('unit_number') else "#64748b"
+                            cat_name = note.get('category', 'Study Material')
+
+                            st.markdown(f"##### 📄 {note['title']}")
+
+                            badges_line = (
+                                f"<span style='background:#eff6ff; color:{badge_unit_color}; border:1px solid #bfdbfe; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600;'>{unit_label}</span> "
+                                f"<span style='background:#f1f5f9; color:#334155; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:500;'>{cat_name}</span> "
+                                f"<span style='background:#ecfdf5; color:#065f46; padding:2px 8px; border-radius:12px; font-size:0.78rem; font-weight:600;'>{note.get('file_type', 'pdf').upper()} • {note.get('formatted_size', '')}</span>"
+                            )
+                            st.markdown(badges_line, unsafe_allow_html=True)
+
+                            if note.get("description") and note["description"] != note["title"]:
+                                st.caption(f"📁 {note['description']}")
+
+                        with c_card_dl:
+                            fp = note.get("abs_filepath")
+                            if fp and os.path.exists(fp):
+                                with open(fp, "rb") as f_obj:
+                                    note_bytes = f_obj.read()
+                                st.download_button(
+                                    label="⬇️ Download",
+                                    data=note_bytes,
+                                    file_name=note["filename"],
+                                    mime="application/pdf" if note.get("file_type") == "pdf" else "application/octet-stream",
+                                    key=f"dl_tab_note_{note['id']}",
+                                    use_container_width=True
+                                )
+                            else:
+                                st.caption("⚠️ File missing")
+        else:
+            st.info(f"ℹ️ No dedicated lecture notes or materials are currently indexed for **{resolved_title}** in **{selected_branch} Semester {selected_sem}**.")
+
+            if db:
+                available_courses = get_cached_available_note_courses(db, selected_branch, sem_int)
+                if available_courses:
+                    st.markdown(f"#### 📚 Available Notes in {selected_branch} Semester {selected_sem}:")
+                    st.markdown("Notes are available for the following subjects in this semester. You can select them from the Subject dropdown above:")
+                    for ac in available_courses:
+                        tot_mb = (ac.get('total_size', 0) or 0) / (1024 * 1024)
+                        with st.container(border=True):
+                            c_a1, c_a2 = st.columns([3, 1])
+                            with c_a1:
+                                st.markdown(f"**{ac['course_title']}**")
+                                st.caption(f"📁 Folder: `{ac['subject_folder']}` | Categories: {ac.get('categories', 'Notes')}")
+                            with c_a2:
+                                st.markdown(f"📄 **{ac['note_count']} files** (`{tot_mb:.1f} MB`)")
 
     # -------------------------------------------------------------
     # TAB C: Explain a Topic
@@ -1089,7 +1280,11 @@ def render_subject_assistance_fragment(pipeline, db):
         with col_p3:
             prac_type = st.radio("Question Type", ["Multiple Choice", "Short Answer"], key=f"prac_type_{subject_key}")
 
-        generate_prac_btn = st.button("Generate Practice Questions", type="primary", key=f"prac_btn_{subject_key}")
+        col_pbtn1, col_pbtn2 = st.columns([1, 1])
+        with col_pbtn1:
+            generate_prac_btn = st.button("Generate Practice Questions", type="primary", key=f"prac_btn_{subject_key}")
+        with col_pbtn2:
+            regenerate_prac_btn = st.button("🔄 Generate Different Questions", key=f"prac_regen_btn_{subject_key}")
 
         cache_key_prac = get_subject_cache_key(
             resolved_title, prac_unit, f"{prac_count}_{prac_type}", "practice",
@@ -1097,15 +1292,39 @@ def render_subject_assistance_fragment(pipeline, db):
         )
         cached_prac = db.get_cached_answer(cache_key_prac)
 
+        def _resolve_unit_topics():
+            sel_top = ""
+            if prac_unit == "All Units":
+                if units_data:
+                    sel_top = "; ".join(u.get("topics", "") for u in units_data if u.get("topics"))
+                if not sel_top and db:
+                    u_db = db.get_syllabus_units_for_course(selected_branch, selected_semester, resolved_title)
+                    if u_db:
+                        sel_top = "; ".join(u.get("topics", "") for u in u_db if u.get("topics"))
+            else:
+                if units_data:
+                    matched = next((u for u in units_data if f"Unit {u.get('unit_number')}: {u.get('unit_title')}" == prac_unit or str(u.get("unit_number")) in str(prac_unit)), None)
+                    if matched:
+                        sel_top = matched.get("topics", "")
+                if not sel_top and db:
+                    u_db = db.get_syllabus_units_for_course(selected_branch, selected_semester, resolved_title)
+                    if u_db:
+                        matched = next((u for u in u_db if f"Unit {u.get('unit_number')}: {u.get('unit_title')}" == prac_unit or str(u.get("unit_number")) in str(prac_unit)), None)
+                        if matched:
+                            sel_top = matched.get("topics", "")
+            return sel_top
+
         prac_content = None
-        if generate_prac_btn:
-            with st.status("Preparing your practice questions...", expanded=False):
-                sel_topics = ""
-                if units_data and prac_unit != "All Units":
-                    matched_u = next((u for u in units_data if f"Unit {u.get('unit_number')}: {u.get('unit_title')}" == prac_unit), None)
-                    if matched_u:
-                        sel_topics = matched_u.get("topics", "")
-                sys_p, usr_p = build_practice_prompt(resolved_title, prac_unit, prac_count, prac_type, unit_topics=sel_topics)
+        should_generate_fresh = generate_prac_btn or regenerate_prac_btn
+        if should_generate_fresh:
+            status_msg = "Generating different practice questions..." if regenerate_prac_btn else "Preparing your practice questions..."
+            with st.status(status_msg, expanded=False):
+                # Update quiz version to reset radio buttons
+                st.session_state[f"quiz_ver_{cache_key_prac}"] = st.session_state.get(f"quiz_ver_{cache_key_prac}", 0) + 1
+                random_seed = int(time.time() * 1000) % 1000000
+
+                sel_topics = _resolve_unit_topics()
+                sys_p, usr_p = build_practice_prompt(resolved_title, prac_unit, prac_count, prac_type, unit_topics=sel_topics, seed=random_seed)
                 client = getattr(pipeline, "client", None)
                 model_name = getattr(pipeline, "model_name", None)
                 raw_prac = call_subject_llm(sys_p, usr_p, client=client, model_name=model_name, max_tokens=3500)
@@ -1113,13 +1332,16 @@ def render_subject_assistance_fragment(pipeline, db):
                 if VERIFICATION_LINE.lower() not in prac_content.lower():
                     prac_content = f"{prac_content.rstrip()}\n\n{VERIFICATION_LINE}"
 
-                # Ensure valid MCQ JSON exists before caching
+                # Ensure valid question content exists before caching
                 if "multiple choice" in prac_type.lower():
                     mcqs = extract_mcq_json(prac_content)
                     if not mcqs:
-                        # Fallback to subject-aware generator if LLM returned thinking or unparseable output
-                        mcqs = generate_subject_mcqs(resolved_title, prac_unit, sel_topics, prac_count)
+                        # Fallback to subject-aware generator with seed for fresh questions
+                        mcqs = generate_subject_mcqs(resolved_title, prac_unit, sel_topics, prac_count, seed=random_seed)
                         prac_content = f"```json\n{json.dumps(mcqs, indent=2)}\n```\n\n{VERIFICATION_LINE}"
+                else:
+                    if not prac_content or "### Question" not in prac_content:
+                        prac_content = generate_subject_short_answers(resolved_title, prac_unit, sel_topics, prac_count, seed=random_seed)
 
                 db.set_cached_answer(cache_key_prac, {
                     "answer": prac_content,
@@ -1134,11 +1356,7 @@ def render_subject_assistance_fragment(pipeline, db):
                     prac_content = cand_ans
                 else:
                     # Invalidate bad cache and generate clean subject MCQs
-                    sel_topics = ""
-                    if units_data and prac_unit != "All Units":
-                        matched_u = next((u for u in units_data if f"Unit {u.get('unit_number')}: {u.get('unit_title')}" == prac_unit), None)
-                        if matched_u:
-                            sel_topics = matched_u.get("topics", "")
+                    sel_topics = _resolve_unit_topics()
                     mcqs = generate_subject_mcqs(resolved_title, prac_unit, sel_topics, prac_count)
                     prac_content = f"```json\n{json.dumps(mcqs, indent=2)}\n```\n\n{VERIFICATION_LINE}"
                     db.set_cached_answer(cache_key_prac, {
@@ -1147,7 +1365,16 @@ def render_subject_assistance_fragment(pipeline, db):
                         "subject": resolved_title
                     })
             else:
-                prac_content = cand_ans
+                if not cand_ans or "### Question" not in cand_ans:
+                    sel_topics = _resolve_unit_topics()
+                    prac_content = generate_subject_short_answers(resolved_title, prac_unit, sel_topics, prac_count)
+                    db.set_cached_answer(cache_key_prac, {
+                        "answer": prac_content,
+                        "response_type": "ANSWERED",
+                        "subject": resolved_title
+                    })
+                else:
+                    prac_content = cand_ans
 
         if prac_content:
             # Render Practice Content
@@ -1155,14 +1382,11 @@ def render_subject_assistance_fragment(pipeline, db):
                 mcq_list = extract_mcq_json(prac_content)
                 if not mcq_list:
                     # Safety fallback to ensure student always gets interactive radio buttons
-                    sel_topics = ""
-                    if units_data and prac_unit != "All Units":
-                        matched_u = next((u for u in units_data if f"Unit {u.get('unit_number')}: {u.get('unit_title')}" == prac_unit), None)
-                        if matched_u:
-                            sel_topics = matched_u.get("topics", "")
+                    sel_topics = _resolve_unit_topics()
                     mcq_list = generate_subject_mcqs(resolved_title, prac_unit, sel_topics, prac_count)
 
                 if mcq_list and isinstance(mcq_list, list):
+                    q_ver = st.session_state.get(f"quiz_ver_{cache_key_prac}", 0)
                     for idx, q in enumerate(mcq_list):
                         q_num = q.get("question_number", idx + 1)
                         q_text = q.get("question", "")
@@ -1178,7 +1402,7 @@ def render_subject_assistance_fragment(pipeline, db):
                             f"Select answer for Q{q_num}:",
                             opt_display,
                             index=None,
-                            key=f"mcq_radio_{cache_key_prac}_{idx}",
+                            key=f"mcq_radio_{cache_key_prac}_{q_ver}_{idx}",
                             label_visibility="collapsed"
                         )
 

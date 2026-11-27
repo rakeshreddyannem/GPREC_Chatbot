@@ -26,6 +26,7 @@ PROCESSED_DATA_DIR = DATA_DIR / "processed"
 VECTORSTORE_DIR = BASE_DIR / "vectorstore"
 REPORTS_DIR = BASE_DIR / "reports"
 DB_PATH = BASE_DIR / os.getenv("DB_PATH", "gprec_knowledge.db")
+NOTES_DIR = BASE_DIR / os.getenv("NOTES_DIR", "Subject_notes_pdfs_semester_Wise")
 
 # Crawler settings
 TARGET_URL = "https://gprec.ac.in"
