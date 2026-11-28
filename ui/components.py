@@ -33,44 +33,6 @@ def safe_link_button(label: str, url: Optional[str], **kwargs):
     except Exception:
         st.markdown(f"[{label}]({cleaned})")
 
-def render_mobile_navigation_bar(nav_groups: Optional[Dict[str, str]] = None):
-    """Renders a sleek, touch-friendly tab navigation bar at the top of the main container for mobile and desktop."""
-    if nav_groups is None:
-        nav_groups = {
-            "Ask AI": "💬",
-            "Subject Assistance": "🎓",
-            "Academics": "📘",
-            "Latest Notices": "📅",
-            "Deadlines": "⏳"
-        }
-    current_page = st.session_state.get("page", "Ask AI")
-    
-    short_labels = {
-        "Ask AI": "💬 Ask AI",
-        "Subject Assistance": "🎓 Subjects",
-        "Academics": "📘 Academics",
-        "Latest Notices": "📅 Notices",
-        "Deadlines": "⏳ Deadlines",
-        "Admin": "⚙️ Admin"
-    }
-
-    cols = st.columns(len(nav_groups))
-    for i, (page_key, icon) in enumerate(nav_groups.items()):
-        with cols[i]:
-            label = short_labels.get(page_key, f"{icon} {page_key}")
-            is_active = (current_page == page_key)
-            btn_type = "primary" if is_active else "secondary"
-            if st.button(
-                label,
-                key=f"topnav_btn_{page_key}",
-                type=btn_type,
-                use_container_width=True
-            ):
-                if current_page != page_key:
-                    st.session_state.page = page_key
-                    st.session_state.nav_radio = page_key
-                    st.rerun()
-
 from src.subject_assistant import (
     VERIFICATION_LINE,
     PRACTICE_DISCLAIMER,

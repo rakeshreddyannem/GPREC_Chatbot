@@ -27,7 +27,7 @@ try:
         render_academics_page, render_subject_assistance_page, render_admin_page,
         render_chat_faculty_cards, render_loading_skeleton, render_html_block,
         render_faculty_directory_page, get_base64_of_bin_file,
-        render_mobile_navigation_bar, safe_link_button, safe_url
+        safe_link_button, safe_url
     )
 except (ImportError, AttributeError):
     importlib.reload(ui.components)
@@ -38,7 +38,7 @@ except (ImportError, AttributeError):
         render_academics_page, render_subject_assistance_page, render_admin_page,
         render_chat_faculty_cards, render_html_block,
         render_faculty_directory_page, get_base64_of_bin_file,
-        render_mobile_navigation_bar, safe_link_button, safe_url
+        safe_link_button, safe_url
     )
     render_loading_skeleton = getattr(ui.components, "render_loading_skeleton", None)
     if render_loading_skeleton is None:
@@ -490,7 +490,6 @@ def main():
     if st.session_state.page == "Ask AI":
         with time_block("render: Ask AI"):
             render_header()
-            render_mobile_navigation_bar(nav_groups)
             
             # a. Initialise st.session_state.messages once (ensuring safe fallback)
             if "messages" not in st.session_state:
@@ -688,19 +687,15 @@ def main():
 
     elif st.session_state.page == "Subject Assistance":
         with time_block("render: Subject Assistance"):
-            render_mobile_navigation_bar(nav_groups)
             render_subject_assistance_page(pipeline, db)
     elif st.session_state.page == "Academics":
         with time_block("render: Academics"):
-            render_mobile_navigation_bar(nav_groups)
             render_academics_page(db)
     elif st.session_state.page == "Latest Notices":
         with time_block("render: Latest Notices"):
-            render_mobile_navigation_bar(nav_groups)
             render_notices_page(db)
     elif st.session_state.page == "Deadlines":
         with time_block("render: Deadlines"):
-            render_mobile_navigation_bar(nav_groups)
             render_deadlines_page(pipeline, db=db)
 
     elif is_admin_param and st.session_state.page == "Admin":

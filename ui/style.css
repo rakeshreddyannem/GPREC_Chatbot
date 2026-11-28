@@ -1298,59 +1298,6 @@ small {
   transform: scale(0.98);
 }
 
-/* ==========================================================================
-   MOBILE NAVIGATION PILLS & TAB BAR
-   ========================================================================== */
-
-.mobile-nav-wrapper {
-  margin-bottom: 0.75rem;
-  width: 100%;
-}
-
-div[data-testid="stHorizontalBlock"]:has(button[key*="topnav_btn_"]) {
-  display: flex !important;
-  flex-wrap: nowrap !important;
-  overflow-x: auto !important;
-  -webkit-overflow-scrolling: touch !important;
-  gap: 0.35rem !important;
-  padding-bottom: 6px !important;
-  margin-bottom: 0.85rem !important;
-  scrollbar-width: thin !important;
-  touch-action: pan-x pinch-zoom !important;
-}
-
-div[data-testid="stHorizontalBlock"]:has(button[key*="topnav_btn_"])::-webkit-scrollbar {
-  height: 3px !important;
-}
-
-div[data-testid="stHorizontalBlock"]:has(button[key*="topnav_btn_"])::-webkit-scrollbar-thumb {
-  background: var(--slate-300) !important;
-  border-radius: 3px !important;
-}
-
-button[key*="topnav_btn_"] {
-  border-radius: 20px !important;
-  padding: 0.4rem 0.65rem !important;
-  font-size: 0.82rem !important;
-  min-height: 40px !important;
-  white-space: nowrap !important;
-  font-weight: 600 !important;
-  touch-action: manipulation !important;
-}
-
-button[key*="topnav_btn_"][data-testid="stBaseButton-primary"] {
-  background-color: var(--amber-600) !important;
-  border-color: var(--amber-600) !important;
-  color: #ffffff !important;
-  box-shadow: 0 2px 8px -1px rgba(217, 119, 6, 0.4) !important;
-}
-
-button[key*="topnav_btn_"][data-testid="stBaseButton-secondary"] {
-  background-color: #ffffff !important;
-  border: 1px solid var(--slate-300) !important;
-  color: var(--slate-700) !important;
-}
-
 /* Ensure sidebar collapse control hamburger button is always visible on mobile/APK embed mode */
 [data-testid="stSidebarCollapsedControl"],
 [data-testid="stSidebarCollapseButton"] {
