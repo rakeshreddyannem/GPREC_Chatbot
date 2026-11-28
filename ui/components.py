@@ -4,7 +4,72 @@ import os
 import json
 import re
 import time
+import urllib.parse
 from datetime import datetime
+from typing import Any, Optional, Dict, List, Tuple
+
+def safe_url(url: Optional[str]) -> str:
+    """Sanitizes and safely URL-encodes links (handling unescaped spaces and relative paths) so st.link_button never crashes."""
+    if not url or not isinstance(url, str):
+        return "https://www.gprec.ac.in"
+    url = url.strip()
+    if not url or url == "#":
+        return "https://www.gprec.ac.in"
+    if not url.startswith(("http://", "https://", "mailto:", "tel:")):
+        url = "https://www.gprec.ac.in/" + url.lstrip("/")
+    try:
+        parts = urllib.parse.urlsplit(url)
+        path = urllib.parse.quote(parts.path, safe="/:@!$&'()*+,;=")
+        query = urllib.parse.quote(parts.query, safe="=&?:@!$'()*+,;")
+        return urllib.parse.urlunsplit((parts.scheme, parts.netloc, path, query, parts.fragment))
+    except Exception:
+        return url.replace(" ", "%20")
+
+def safe_link_button(label: str, url: Optional[str], **kwargs):
+    """Renders st.link_button safely, gracefully falling back to a clean markdown link if Streamlit raises an exception."""
+    cleaned = safe_url(url)
+    try:
+        st.link_button(label, cleaned, **kwargs)
+    except Exception:
+        st.markdown(f"[{label}]({cleaned})")
+
+def render_mobile_navigation_bar(nav_groups: Optional[Dict[str, str]] = None):
+    """Renders a sleek, touch-friendly tab navigation bar at the top of the main container for mobile and desktop."""
+    if nav_groups is None:
+        nav_groups = {
+            "Ask AI": "💬",
+            "Subject Assistance": "🎓",
+            "Academics": "📘",
+            "Latest Notices": "📅",
+            "Deadlines": "⏳"
+        }
+    current_page = st.session_state.get("page", "Ask AI")
+    
+    short_labels = {
+        "Ask AI": "💬 Ask AI",
+        "Subject Assistance": "🎓 Subjects",
+        "Academics": "📘 Academics",
+        "Latest Notices": "📅 Notices",
+        "Deadlines": "⏳ Deadlines",
+        "Admin": "⚙️ Admin"
+    }
+
+    cols = st.columns(len(nav_groups))
+    for i, (page_key, icon) in enumerate(nav_groups.items()):
+        with cols[i]:
+            label = short_labels.get(page_key, f"{icon} {page_key}")
+            is_active = (current_page == page_key)
+            btn_type = "primary" if is_active else "secondary"
+            if st.button(
+                label,
+                key=f"topnav_btn_{page_key}",
+                type=btn_type,
+                use_container_width=True
+            ):
+                if current_page != page_key:
+                    st.session_state.page = page_key
+                    st.session_state.nav_radio = page_key
+                    st.rerun()
 
 from src.subject_assistant import (
     VERIFICATION_LINE,
@@ -581,132 +646,136 @@ def render_clarify(question, options, key_prefix="clarify"):
             st.button(opt, key=f"{key_prefix}_{idx}_{opt}", use_container_width=True, on_click=_handle_clarify_click, args=(opt, question))
 
 
-@st.fragment
 def render_notices_fragment(db):
-    latest_pub = get_cached_latest_notice_date(db)
-    pub_display = format_date(latest_pub) if latest_pub else "October 2026"
-    st.markdown(f"<div style='font-size:0.85rem; color:#64748b; margin-bottom:12px;'>📅 <b>Notice Board Last Checked:</b> {pub_display}</div>", unsafe_allow_html=True)
+    try:
+        latest_pub = get_cached_latest_notice_date(db)
+        pub_display = format_date(latest_pub) if latest_pub else "October 2026"
+        st.markdown(f"<div style='font-size:0.85rem; color:#64748b; margin-bottom:12px;'>📅 <b>Notice Board Last Checked:</b> {pub_display}</div>", unsafe_allow_html=True)
 
-    # Search and Filter controls
-    notice_search = st.text_input("🔍 Search notices", placeholder="Search notices by keyword, exam type, fee, circular...", key="notices_search_kw")
+        # Search and Filter controls (Mobile-friendly 2x2 grid)
+        notice_search = st.text_input("🔍 Search notices", placeholder="Search notices by keyword, exam type, fee, circular...", key="notices_search_kw")
 
-    c1, c2, c3, c4 = st.columns([1.2, 1, 1, 1])
-    with c1:
-        dept_options = ["All", "General", "CSE", "ECE", "EEE", "CE", "ME", "CSM", "H&S"]
-        selected_dept = st.selectbox("Department", dept_options, key="notices_filter_dept")
-    with c2:
-        type_options = ["All", "timetable", "seating plan", "results", "revaluation", "hall ticket", "fee notification", "circular", "event"]
-        selected_type = st.selectbox("Type", type_options, format_func=lambda x: x.title(), key="notices_filter_type")
-    with c3:
-        prog_options = ["All", "B.Tech", "M.Tech", "MBA", "MCA"]
-        selected_prog = st.selectbox("Program", prog_options, key="notices_filter_prog")
-    with c4:
-        sem_options = ["All", "I Sem", "II Sem", "III Sem", "IV Sem", "V Sem", "VI Sem", "VII Sem", "VIII Sem"]
-        selected_sem = st.selectbox("Semester", sem_options, key="notices_filter_sem")
+        c1, c2 = st.columns(2)
+        with c1:
+            dept_options = ["All", "General", "CSE", "ECE", "EEE", "CE", "ME", "CSM", "H&S"]
+            selected_dept = st.selectbox("Department", dept_options, key="notices_filter_dept")
+        with c2:
+            type_options = ["All", "timetable", "seating plan", "results", "revaluation", "hall ticket", "fee notification", "circular", "event"]
+            selected_type = st.selectbox("Type", type_options, format_func=lambda x: x.title(), key="notices_filter_type")
 
-    # Fetch notices from structured notices table using cached query
-    notices = get_cached_notices(
-        db,
-        notice_type=selected_type if selected_type != "All" else None,
-        program=selected_prog if selected_prog != "All" else None,
-        semester=selected_sem if selected_sem != "All" else None,
-        active_only=True,
-        limit=50
-    )
+        c3, c4 = st.columns(2)
+        with c3:
+            prog_options = ["All", "B.Tech", "M.Tech", "MBA", "MCA"]
+            selected_prog = st.selectbox("Program", prog_options, key="notices_filter_prog")
+        with c4:
+            sem_options = ["All", "I Sem", "II Sem", "III Sem", "IV Sem", "V Sem", "VI Sem", "VII Sem", "VIII Sem"]
+            selected_sem = st.selectbox("Semester", sem_options, key="notices_filter_sem")
 
-    # Apply department filter if not All
-    if selected_dept != "All":
-        notices = [n for n in notices if (n.get("department") or "General").upper() == selected_dept.upper()]
+        # Fetch notices from structured notices table using cached query
+        notices = get_cached_notices(
+            db,
+            notice_type=selected_type if selected_type != "All" else None,
+            program=selected_prog if selected_prog != "All" else None,
+            semester=selected_sem if selected_sem != "All" else None,
+            active_only=True,
+            limit=50
+        )
 
-    # Apply keyword search filter if provided
-    if notice_search and notice_search.strip():
-        q_lower = notice_search.strip().lower()
-        notices = [
-            n for n in notices
-            if q_lower in (n.get("title") or "").lower()
-            or q_lower in (n.get("raw_text") or "").lower()
-            or q_lower in (n.get("department") or "").lower()
-            or q_lower in (n.get("notice_type") or "").lower()
-        ]
-    
-    # Check if newest notice is >30 days old using cached query
-    if latest_pub:
-        try:
-            from datetime import datetime
-            latest_dt = datetime.strptime(latest_pub[:10], "%Y-%m-%d")
-            days_old = (datetime.now() - latest_dt).days
-            if days_old > 30:
-                st.warning(f"⚠️ **Notice Board Notice:** The latest archived notice is {days_old} days old. Please consult the physical college notice board or [examcell.gprec.ac.in](http://examcell.gprec.ac.in/) for live announcements.")
-        except Exception:
-            pass
+        # Apply department filter if not All
+        if selected_dept != "All":
+            notices = [n for n in notices if (n.get("department") or "General").upper() == selected_dept.upper()]
 
-    if not notices:
-        st.info("No notices found matching the selected filters. Please adjust the filters or search query.")
-        return
-
-    st.caption(f"Showing {len(notices)} notices (latest first):")
-
-    type_colors = {
-        "timetable": "#2563eb",
-        "seating plan": "#7c3aed",
-        "results": "#059669",
-        "revaluation": "#d97706",
-        "hall ticket": "#4f46e5",
-        "fee notification": "#dc2626",
-        "circular": "#4b5563",
-        "event": "#0891b2"
-    }
-
-    for idx, notice in enumerate(notices):
-        title = notice.get("title") or "College Notice"
-        ntype = notice.get("notice_type") or "circular"
-        prog = notice.get("program") or ""
-        sem = notice.get("semester") or ""
-        reg = notice.get("scheme_regulation") or ""
-        dept = notice.get("department") or "General"
-        deadline = notice.get("deadline_date")
+        # Apply keyword search filter if provided
+        if notice_search and notice_search.strip():
+            q_lower = notice_search.strip().lower()
+            notices = [
+                n for n in notices
+                if q_lower in (n.get("title") or "").lower()
+                or q_lower in (n.get("raw_text") or "").lower()
+                or q_lower in (n.get("department") or "").lower()
+                or q_lower in (n.get("notice_type") or "").lower()
+            ]
         
-        pub_raw = notice.get("published_date")
-        if pub_raw:
-            date_display = format_date(pub_raw)
-        else:
-            date_display = "Date not found"
-            
-        doc_url = notice.get("document_url") or notice.get("attachment_urls") or notice.get("source_page") or "https://www.gprec.ac.in"
-        # If multiple comma-separated URLs in attachment_urls, take the first valid one
-        if doc_url and "," in doc_url:
-            doc_url = doc_url.split(",")[0].strip()
-            
-        raw_text = notice.get("raw_text") or ""
-        badge_color = type_colors.get(ntype.lower(), "#4b5563")
+        # Check if newest notice is >30 days old using cached query
+        if latest_pub:
+            try:
+                from datetime import datetime
+                latest_dt = datetime.strptime(latest_pub[:10], "%Y-%m-%d")
+                days_old = (datetime.now() - latest_dt).days
+                if days_old > 30:
+                    st.warning(f"⚠️ **Notice Board Notice:** The latest archived notice is {days_old} days old. Please consult the physical college notice board or [examcell.gprec.ac.in](http://examcell.gprec.ac.in/) for live announcements.")
+            except Exception:
+                pass
 
-        with st.container(border=True):
-            st.markdown(f"#### {title}")
+        if not notices:
+            st.info("No notices found matching the selected filters. Please adjust the filters or search query.")
+            return
+
+        st.caption(f"Showing {len(notices)} notices (latest first):")
+
+        type_colors = {
+            "timetable": "#2563eb",
+            "seating plan": "#7c3aed",
+            "results": "#059669",
+            "revaluation": "#d97706",
+            "hall ticket": "#4f46e5",
+            "fee notification": "#dc2626",
+            "circular": "#4b5563",
+            "event": "#0891b2"
+        }
+
+        for idx, notice in enumerate(notices):
+            title = notice.get("title") or "College Notice"
+            ntype = notice.get("notice_type") or "circular"
+            prog = notice.get("program") or ""
+            sem = notice.get("semester") or ""
+            reg = notice.get("scheme_regulation") or ""
+            dept = notice.get("department") or "General"
+            deadline = notice.get("deadline_date")
             
-            # Tags row: Department tag, Notice type tag, Program/Semester tags, Date, Deadline
-            tags_html = f"<span style='background-color:#EEF2FF; color:#4338CA; border:1px solid #C7D2FE; padding:3px 8px; border-radius:12px; font-size:0.78rem; font-weight:600;'>🏛️ {dept}</span> "
-            tags_html += f"<span style='background-color:{badge_color}; color:white; padding:3px 8px; border-radius:12px; font-size:0.78rem; font-weight:600;'>{ntype.title()}</span>"
-            if prog:
-                tags_html += f" <span style='background-color:#E0E7FF; color:#3730A3; padding:3px 8px; border-radius:12px; font-size:0.78rem; font-weight:500;'>{prog}</span>"
-            if sem:
-                tags_html += f" <span style='background-color:#F3F4F6; color:#1F2937; padding:3px 8px; border-radius:12px; font-size:0.78rem;'>{sem}</span>"
-            if reg:
-                tags_html += f" <span style='background-color:#FEF3C7; color:#92400E; padding:3px 8px; border-radius:12px; font-size:0.78rem;'>{reg}</span>"
-            
-            # Date tag - shows formatted date or 'Date not found'
-            tags_html += f" <span style='color:#4B5563; font-size:0.8rem; margin-left:8px; font-weight:500;'>📅 {date_display}</span>"
-            
-            if deadline:
-                tags_html += f" <span style='background-color:#FEE2E2; color:#991B1B; border:1px solid #FCA5A5; padding:3px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; margin-left:8px;'>⏳ Deadline: {deadline}</span>"
-            
-            st.markdown(tags_html, unsafe_allow_html=True)
-            
-            if raw_text and raw_text.strip() != title.strip():
-                st.caption(raw_text[:250] + ('...' if len(raw_text) > 250 else ''))
+            pub_raw = notice.get("published_date")
+            if pub_raw:
+                date_display = format_date(pub_raw)
+            else:
+                date_display = "Date not found"
                 
-            # 'Open document' button using st.link_button. Never show raw URLs as text.
-            if doc_url:
-                st.link_button("📄 Open document", doc_url, key=f"notice_btn_{notice.get('notice_id', idx)}")
+            doc_url = notice.get("document_url") or notice.get("attachment_urls") or notice.get("source_page") or "https://www.gprec.ac.in"
+            # If multiple comma-separated URLs in attachment_urls, take the first valid one
+            if doc_url and "," in doc_url:
+                doc_url = doc_url.split(",")[0].strip()
+                
+            raw_text = notice.get("raw_text") or ""
+            badge_color = type_colors.get(ntype.lower(), "#4b5563")
+
+            with st.container(border=True):
+                st.markdown(f"#### {title}")
+                
+                # Tags row: Department tag, Notice type tag, Program/Semester tags, Date, Deadline
+                tags_html = f"<span style='background-color:#EEF2FF; color:#4338CA; border:1px solid #C7D2FE; padding:3px 8px; border-radius:12px; font-size:0.78rem; font-weight:600;'>🏛️ {dept}</span> "
+                tags_html += f"<span style='background-color:{badge_color}; color:white; padding:3px 8px; border-radius:12px; font-size:0.78rem; font-weight:600;'>{ntype.title()}</span>"
+                if prog:
+                    tags_html += f" <span style='background-color:#E0E7FF; color:#3730A3; padding:3px 8px; border-radius:12px; font-size:0.78rem; font-weight:500;'>{prog}</span>"
+                if sem:
+                    tags_html += f" <span style='background-color:#F3F4F6; color:#1F2937; padding:3px 8px; border-radius:12px; font-size:0.78rem;'>{sem}</span>"
+                if reg:
+                    tags_html += f" <span style='background-color:#FEF3C7; color:#92400E; padding:3px 8px; border-radius:12px; font-size:0.78rem;'>{reg}</span>"
+                
+                # Date tag - shows formatted date or 'Date not found'
+                tags_html += f" <span style='color:#4B5563; font-size:0.8rem; margin-left:8px; font-weight:500;'>📅 {date_display}</span>"
+                
+                if deadline:
+                    tags_html += f" <span style='background-color:#FEE2E2; color:#991B1B; border:1px solid #FCA5A5; padding:3px 8px; border-radius:12px; font-size:0.78rem; font-weight:600; margin-left:8px;'>⏳ Deadline: {deadline}</span>"
+                
+                st.markdown(tags_html, unsafe_allow_html=True)
+                
+                if raw_text and raw_text.strip() != title.strip():
+                    st.caption(raw_text[:250] + ('...' if len(raw_text) > 250 else ''))
+                    
+                # 'Open document' button using safe_link_button. Never crashes on unencoded URLs.
+                if doc_url:
+                    safe_link_button("📄 Open document", doc_url, key=f"notice_btn_{notice.get('notice_id', idx)}")
+    except Exception as e:
+        st.error("⚠️ An error occurred while loading notices. Please refresh the page.")
 
 def render_notices_page(db):
     st.title("📅 Latest Notices & Examination Updates")
@@ -714,75 +783,81 @@ def render_notices_page(db):
     render_notices_fragment(db)
 
 def render_deadlines_page(pipeline, db=None):
-    st.title("⏳ Deadlines & Important Dates")
-    st.markdown("Upcoming examination fee deadlines, revaluation last dates, and academic schedule deadlines.")
-    
-    st.markdown("<div style='font-size:0.85rem; color:#64748b; margin-bottom:12px;'>📅 <b>Deadlines Last Synchronized:</b> October 2026</div>", unsafe_allow_html=True)
-
-    # Collect deadlines from both database notices and pipeline metadata
-    deadlines = []
-    
-    if db is not None:
-        deadlines = get_cached_deadlines(db)
-
-    if not deadlines and pipeline:
-        deadlines = [m for m in pipeline.vstore.metadata if m.get("category") == "Deadlines"]
-    
-    if not deadlines:
-        st.info("No upcoming deadlines found in the knowledge base. Please check official notifications.")
-        return
+    try:
+        st.title("⏳ Deadlines & Important Dates")
+        st.markdown("Upcoming examination fee deadlines, revaluation last dates, and academic schedule deadlines.")
         
-    dl_search_kw = st.text_input("🔍 Search deadlines", placeholder="Search by exam fee, revaluation, semester...", key="deadlines_search_input")
-    dl_dept = st.selectbox("Filter by Department", ["All", "General", "CSE", "ECE", "EEE", "CE", "ME", "CSM", "H&S"], key="deadlines_dept_select")
+        st.markdown("<div style='font-size:0.85rem; color:#64748b; margin-bottom:12px;'>📅 <b>Deadlines Last Synchronized:</b> October 2026</div>", unsafe_allow_html=True)
 
-    if dl_dept != "All":
-        deadlines = [d for d in deadlines if (d.get("department") or "General").upper() == dl_dept.upper()]
-
-    if dl_search_kw and dl_search_kw.strip():
-        q_l = dl_search_kw.strip().lower()
-        deadlines = [d for d in deadlines if q_l in (d.get("title") or "").lower() or q_l in (d.get("raw_text") or "").lower()]
-
-    if not deadlines:
-        st.info("No deadlines match your filter criteria.")
-        return
-
-    for idx, item in enumerate(deadlines):
-        title = item.get("title", "Important Deadline")
-        pub_date = item.get("published_date", "")
-        formatted_pub = format_date(pub_date)
-        raw_text = item.get("raw_text", "")
-        att_url = (item.get("attachment_urls") or "").split(",")[0] if item.get("attachment_urls") else item.get("source_page", "#")
+        # Collect deadlines from both database notices and pipeline metadata
+        deadlines = []
         
-        # Calculate countdown or status if date present
-        countdown_badge = ""
-        import re
-        date_match = re.search(r'(\d{1,2}[-/.]\d{1,2}[-/.]\d{4})', raw_text)
-        if date_match:
-            try:
-                from datetime import datetime
-                from dateutil import parser as dp
-                d_dt = dp.parse(date_match.group(1), fuzzy=True, dayfirst=True)
-                days_left = (d_dt - datetime.now()).days
-                if days_left >= 0:
-                    countdown_badge = f"<span style='background-color:#DEF7EC; color:#03543F; padding:2px 8px; border-radius:10px; font-size:0.8rem; font-weight:600;'>⏳ {days_left} days remaining ({date_match.group(1)})</span>"
-                else:
-                    countdown_badge = f"<span style='background-color:#FDE8E8; color:#9B1C1C; padding:2px 8px; border-radius:10px; font-size:0.8rem;'>Closed on {date_match.group(1)}</span>"
-            except Exception:
-                pass
+        if db is not None:
+            deadlines = get_cached_deadlines(db)
 
-        with st.container(border=True):
-            st.markdown(f"#### {title}")
-            meta_line = ""
-            if formatted_pub:
-                meta_line += f"Published: {formatted_pub}  "
-            if countdown_badge:
-                meta_line += countdown_badge
-            if meta_line:
-                st.markdown(meta_line, unsafe_allow_html=True)
-            if raw_text and raw_text != title:
-                st.caption(raw_text[:180] + ('...' if len(raw_text) > 180 else ''))
-            if att_url and att_url != "#":
-                st.link_button("📄 Open document", att_url, key=f"dl_open_btn_{idx}")
+        if not deadlines and pipeline:
+            deadlines = [m for m in pipeline.vstore.metadata if m.get("category") == "Deadlines"]
+        
+        if not deadlines:
+            st.info("No upcoming deadlines found in the knowledge base. Please check official notifications.")
+            return
+            
+        c_dl1, c_dl2 = st.columns([1.5, 1])
+        with c_dl1:
+            dl_search_kw = st.text_input("🔍 Search deadlines", placeholder="Search by exam fee, revaluation, semester...", key="deadlines_search_input")
+        with c_dl2:
+            dl_dept = st.selectbox("Filter by Department", ["All", "General", "CSE", "ECE", "EEE", "CE", "ME", "CSM", "H&S"], key="deadlines_dept_select")
+
+        if dl_dept != "All":
+            deadlines = [d for d in deadlines if (d.get("department") or "General").upper() == dl_dept.upper()]
+
+        if dl_search_kw and dl_search_kw.strip():
+            q_l = dl_search_kw.strip().lower()
+            deadlines = [d for d in deadlines if q_l in (d.get("title") or "").lower() or q_l in (d.get("raw_text") or "").lower()]
+
+        if not deadlines:
+            st.info("No deadlines match your filter criteria.")
+            return
+
+        for idx, item in enumerate(deadlines):
+            title = item.get("title", "Important Deadline")
+            pub_date = item.get("published_date", "")
+            formatted_pub = format_date(pub_date)
+            raw_text = item.get("raw_text", "")
+            att_url = (item.get("attachment_urls") or "").split(",")[0] if item.get("attachment_urls") else item.get("source_page", "#")
+            
+            # Calculate countdown or status if date present
+            countdown_badge = ""
+            import re
+            date_match = re.search(r'(\d{1,2}[-/.]\d{1,2}[-/.]\d{4})', raw_text)
+            if date_match:
+                try:
+                    from datetime import datetime
+                    from dateutil import parser as dp
+                    d_dt = dp.parse(date_match.group(1), fuzzy=True, dayfirst=True)
+                    days_left = (d_dt - datetime.now()).days
+                    if days_left >= 0:
+                        countdown_badge = f"<span style='background-color:#DEF7EC; color:#03543F; padding:2px 8px; border-radius:10px; font-size:0.8rem; font-weight:600;'>⏳ {days_left} days remaining ({date_match.group(1)})</span>"
+                    else:
+                        countdown_badge = f"<span style='background-color:#FDE8E8; color:#9B1C1C; padding:2px 8px; border-radius:10px; font-size:0.8rem;'>Closed on {date_match.group(1)}</span>"
+                except Exception:
+                    pass
+
+            with st.container(border=True):
+                st.markdown(f"#### {title}")
+                meta_line = ""
+                if formatted_pub:
+                    meta_line += f"Published: {formatted_pub}  "
+                if countdown_badge:
+                    meta_line += countdown_badge
+                if meta_line:
+                    st.markdown(meta_line, unsafe_allow_html=True)
+                if raw_text and raw_text != title:
+                    st.caption(raw_text[:180] + ('...' if len(raw_text) > 180 else ''))
+                if att_url and att_url != "#":
+                    safe_link_button("📄 Open document", att_url, key=f"dl_open_btn_{idx}")
+    except Exception as e:
+        st.error("⚠️ An error occurred while loading deadlines. Please refresh the page.")
 
 def _handle_topic_question(q):
     st.session_state.prompt_trigger = q
@@ -809,7 +884,7 @@ def render_academics_page(db):
     sem_int = int(semester) if semester.isdigit() else 1
     pdf_info = get_branch_latest_syllabus_info(branch, sem_int)
     if pdf_info and pdf_info.get("url"):
-        st.link_button(
+        safe_link_button(
             f"📄 Open Official {branch} Syllabus PDF ({pdf_info['scheme']})",
             pdf_info["url"],
             help=f"Opens official GPREC {branch} syllabus document"
@@ -1176,7 +1251,7 @@ def render_subject_assistance_fragment(pipeline, db):
 
         if pdf_to_open:
             scheme_label = authoritative_info["scheme"] if authoritative_info else "Latest Scheme"
-            st.link_button(
+            safe_link_button(
                 f"📄 Open Official {selected_branch} Syllabus PDF ({scheme_label})",
                 pdf_to_open,
                 help=f"Opens official GPREC {selected_branch} syllabus document"
@@ -2172,7 +2247,7 @@ def render_faculty_directory_fragment(db):
                         st.markdown("<div style='font-size:0.8rem; color:#94a3b8; margin-bottom:10px;'>📧 <i>Email not listed</i></div>", unsafe_allow_html=True)
 
                     if profile_url:
-                        st.link_button("📄 View Profile", profile_url, key=f"grid_btn_{f['id']}_{start_idx}_{i}_{j}", use_container_width=True)
+                        safe_link_button("📄 View Profile", profile_url, key=f"grid_btn_{f['id']}_{start_idx}_{i}_{j}", use_container_width=True)
                     else:
                         st.button("No Profile PDF", key=f"grid_dis_{f['id']}_{start_idx}_{i}_{j}", disabled=True, use_container_width=True)
 

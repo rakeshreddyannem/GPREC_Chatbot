@@ -26,7 +26,8 @@ try:
         render_notices_page, render_deadlines_page, render_topic_page, format_date,
         render_academics_page, render_subject_assistance_page, render_admin_page,
         render_chat_faculty_cards, render_loading_skeleton, render_html_block,
-        render_faculty_directory_page, get_base64_of_bin_file
+        render_faculty_directory_page, get_base64_of_bin_file,
+        render_mobile_navigation_bar, safe_link_button, safe_url
     )
 except (ImportError, AttributeError):
     importlib.reload(ui.components)
@@ -36,7 +37,8 @@ except (ImportError, AttributeError):
         render_notices_page, render_deadlines_page, render_topic_page, format_date,
         render_academics_page, render_subject_assistance_page, render_admin_page,
         render_chat_faculty_cards, render_html_block,
-        render_faculty_directory_page, get_base64_of_bin_file
+        render_faculty_directory_page, get_base64_of_bin_file,
+        render_mobile_navigation_bar, safe_link_button, safe_url
     )
     render_loading_skeleton = getattr(ui.components, "render_loading_skeleton", None)
     if render_loading_skeleton is None:
@@ -235,7 +237,7 @@ def render_answer_footer(msg_idx: int, answer_text: str, question_text: str, sou
             src_cols = st.columns(min(len(display_sources[:3]), 3))
             for i, (short_title, url) in enumerate(display_sources[:3]):
                 with src_cols[i]:
-                    st.link_button(f"📄 {short_title}", url, key=f"{key_prefix}_src_{i}", use_container_width=True)
+                    safe_link_button(f"📄 {short_title}", url, key=f"{key_prefix}_src_{i}", use_container_width=True)
 
     # 3. Actions Row: Copy button and Thumbs Up / Down feedback
     if answer_text:
@@ -278,27 +280,41 @@ def render_syllabus_units(matched_syllabus, key_prefix="syl"):
         for idx, u in enumerate(units[:6]):
             st.markdown(f"- **Unit {idx+1}:** {u}")
     if doc_url:
-        st.link_button(f"Open: {course_name} Syllabus", doc_url, key=f"{key_prefix}_doc")
+        safe_link_button(f"Open: {course_name} Syllabus", doc_url, key=f"{key_prefix}_doc")
 
 def ensure_data_files():
-    """Extracts compressed knowledge base assets if uncompressed files are missing."""
+    """Extracts compressed knowledge base assets safely with atomic rename to avoid concurrency corruptions."""
     db_file = Path(config.DB_PATH)
     idx_file = Path(config.FAISS_INDEX_PATH)
     meta_file = Path(config.FAISS_METADATA_PATH)
 
-    # 1. Database auto-extraction
+    # 1. Database auto-extraction (atomic temp write to prevent partial reads by concurrent requests)
     db_gz = db_file.with_name("gprec_knowledge.db.gz")
     if (not db_file.exists() or db_file.stat().st_size == 0) and db_gz.exists():
         import gzip, shutil
-        with gzip.open(db_gz, "rb") as f_in, open(db_file, "wb") as f_out:
-            shutil.copyfileobj(f_in, f_out)
+        tmp_db = db_file.with_suffix(".tmp")
+        try:
+            with gzip.open(db_gz, "rb") as f_in, open(tmp_db, "wb") as f_out:
+                shutil.copyfileobj(f_in, f_out)
+            os.replace(tmp_db, db_file)
+        except Exception:
+            if tmp_db.exists():
+                try: tmp_db.unlink()
+                except Exception: pass
 
     # 2. Vectorstore metadata auto-extraction
     meta_gz = meta_file.with_name("metadata.pkl.gz")
     if (not meta_file.exists() or meta_file.stat().st_size == 0) and meta_gz.exists():
         import gzip, shutil
-        with gzip.open(meta_gz, "rb") as f_in, open(meta_file, "wb") as f_out:
-            shutil.copyfileobj(f_in, f_out)
+        tmp_meta = meta_file.with_suffix(".tmp")
+        try:
+            with gzip.open(meta_gz, "rb") as f_in, open(tmp_meta, "wb") as f_out:
+                shutil.copyfileobj(f_in, f_out)
+            os.replace(tmp_meta, meta_file)
+        except Exception:
+            if tmp_meta.exists():
+                try: tmp_meta.unlink()
+                except Exception: pass
 
 def main():
     # Ensure data assets are ready before health check or page load
@@ -474,6 +490,7 @@ def main():
     if st.session_state.page == "Ask AI":
         with time_block("render: Ask AI"):
             render_header()
+            render_mobile_navigation_bar(nav_groups)
             
             # a. Initialise st.session_state.messages once (ensuring safe fallback)
             if "messages" not in st.session_state:
@@ -671,15 +688,19 @@ def main():
 
     elif st.session_state.page == "Subject Assistance":
         with time_block("render: Subject Assistance"):
+            render_mobile_navigation_bar(nav_groups)
             render_subject_assistance_page(pipeline, db)
     elif st.session_state.page == "Academics":
         with time_block("render: Academics"):
+            render_mobile_navigation_bar(nav_groups)
             render_academics_page(db)
     elif st.session_state.page == "Latest Notices":
         with time_block("render: Latest Notices"):
+            render_mobile_navigation_bar(nav_groups)
             render_notices_page(db)
     elif st.session_state.page == "Deadlines":
         with time_block("render: Deadlines"):
+            render_mobile_navigation_bar(nav_groups)
             render_deadlines_page(pipeline, db=db)
 
     elif is_admin_param and st.session_state.page == "Admin":
